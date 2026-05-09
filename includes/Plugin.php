@@ -47,7 +47,8 @@ final class Plugin
             return;
         }
 
-        add_action('abilities_api_init', [$this, 'register_abilities']);
+        add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
+        add_action('wp_abilities_api_init', [$this, 'register_abilities']);
         add_action('mcp_adapter_init', [$this, 'register_server']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
     }
@@ -57,6 +58,14 @@ final class Plugin
         foreach ($this->bundles() as $bundle) {
             $bundle->register();
         }
+    }
+
+    public function register_category(): void
+    {
+        wp_register_ability_category('site-mcp', [
+            'label'       => __('Site MCP', 'site-mcp'),
+            'description' => __('WordPress site management abilities exposed to MCP clients.', 'site-mcp'),
+        ]);
     }
 
     public function register_server(\WP\MCP\Core\McpAdapter $adapter): void

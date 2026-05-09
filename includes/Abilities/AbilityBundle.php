@@ -30,6 +30,7 @@ abstract class AbilityBundle
             wp_register_ability($name, [
                 'label'               => $spec['label'],
                 'description'         => $spec['description'],
+                'category'            => 'site-mcp',
                 'input_schema'        => $spec['input_schema']  ?? ['type' => 'object', 'properties' => new \stdClass()],
                 'output_schema'       => $spec['output_schema'] ?? ['type' => 'object'],
                 'permission_callback' => $spec['permission_callback'] ?? '__return_true',
