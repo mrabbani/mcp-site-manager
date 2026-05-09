@@ -1,0 +1,15 @@
+{
+    "core": "WordPress/WordPress",
+    "phpVersion": "8.1",
+    "plugins": [
+        "../mcp-adapter",
+        "."
+    ],
+    "config": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true
+    },
+    "mappings": {
+        "wp-content/plugins/site-mcp": "."
+    }
+}
