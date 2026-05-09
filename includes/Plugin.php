@@ -1,0 +1,105 @@
+<?php
+declare(strict_types=1);
+
+namespace SiteMcp;
+
+final class Plugin
+{
+    private static ?self $instance = null;
+
+    public static function boot(): void
+    {
+        if (self::$instance !== null) {
+            return;
+        }
+        self::$instance = new self();
+        self::$instance->register_hooks();
+    }
+
+    public static function on_activate(): void
+    {
+        Admin\AbilityLog::install_table();
+        if (!self::dependencies_met()) {
+            deactivate_plugins(plugin_basename(SITE_MCP_FILE));
+            wp_die(
+                esc_html__('Site MCP requires the MCP Adapter plugin and the Abilities API (WordPress 6.8+).', 'site-mcp'),
+                esc_html__('Plugin activation failed', 'site-mcp'),
+                ['back_link' => true]
+            );
+        }
+    }
+
+    public static function on_deactivate(): void
+    {
+        // Intentionally non-destructive: keep log table and options.
+    }
+
+    public static function dependencies_met(): bool
+    {
+        return function_exists('wp_register_ability')
+            && class_exists('\\WP\\MCP\\Core\\McpAdapter');
+    }
+
+    private function register_hooks(): void
+    {
+        if (!self::dependencies_met()) {
+            add_action('admin_notices', [$this, 'render_missing_deps_notice']);
+            return;
+        }
+
+        add_action('abilities_api_init', [$this, 'register_abilities']);
+        add_action('mcp_adapter_init', [$this, 'register_server']);
+        add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
+    }
+
+    public function register_abilities(): void
+    {
+        foreach ($this->bundles() as $bundle) {
+            $bundle->register();
+        }
+    }
+
+    public function register_server(\WP\MCP\Core\McpAdapter $adapter): void
+    {
+        Server::register($adapter, $this->ability_names());
+    }
+
+    public function render_missing_deps_notice(): void
+    {
+        echo '<div class="notice notice-error"><p>';
+        echo esc_html__('Site MCP is inactive: install and activate the MCP Adapter plugin (requires WordPress 6.8+).', 'site-mcp');
+        echo '</p></div>';
+    }
+
+    /** @return Abilities\AbilityBundle[] */
+    private function bundles(): array
+    {
+        return [
+            new Abilities\Content\PostsBundle(),
+            new Abilities\Content\PagesBundle(),
+            new Abilities\Content\CptBundle(),
+            new Abilities\Taxonomy\TaxonomyBundle(),
+            new Abilities\Media\MediaBundle(),
+            new Abilities\Comments\CommentsBundle(),
+            new Abilities\Users\UsersBundle(),
+            new Abilities\Plugins\PluginsBundle(),
+            new Abilities\Themes\ThemesBundle(),
+            new Abilities\Options\OptionsBundle(),
+            new Abilities\Menus\MenusBundle(),
+            new Abilities\Diagnostics\DiagnosticsBundle(),
+            new Abilities\Maintenance\MaintenanceBundle(),
+        ];
+    }
+
+    /** @return string[] */
+    public function ability_names(): array
+    {
+        $names = [];
+        foreach ($this->bundles() as $bundle) {
+            foreach (array_keys($bundle->abilities()) as $local) {
+                $names[] = "site-mcp/$local";
+            }
+        }
+        return $names;
+    }
+}
