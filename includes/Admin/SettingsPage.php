@@ -12,8 +12,8 @@ final class SettingsPage
     public static function register(): void
     {
         add_options_page(
-            __('Site MCP', 'mcp-site-manager'),
-            __('Site MCP', 'mcp-site-manager'),
+            __('MCP Site Manager', 'mcp-site-manager'),
+            __('MCP Site Manager', 'mcp-site-manager'),
             'manage_options',
             self::SLUG,
             [self::class, 'render']
@@ -36,7 +36,7 @@ final class SettingsPage
 
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Site MCP', 'mcp-site-manager'); ?></h1>
+            <h1><?php esc_html_e('MCP Site Manager', 'mcp-site-manager'); ?></h1>
 
             <h2><?php esc_html_e('Status', 'mcp-site-manager'); ?></h2>
             <ul>
