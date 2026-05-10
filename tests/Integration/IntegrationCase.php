@@ -107,10 +107,8 @@ abstract class IntegrationCase extends TestCase
         return $decoded;
     }
 
-    protected function tool(string $local_name, array $args = []): array
+    protected function tool(string $name, array $args = []): array
     {
-        // Strip "site-mcp/" prefix if present and convert to MCP tool naming (slashes → hyphens).
-        $name = str_replace('site-mcp/', 'site-mcp-', $local_name);
         return $this->call('tools/call', ['name' => $name, 'arguments' => $args ?: new \stdClass()]);
     }
 }

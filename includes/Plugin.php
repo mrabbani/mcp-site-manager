@@ -49,7 +49,7 @@ final class Plugin
 
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
         add_action('wp_abilities_api_init', [$this, 'register_abilities']);
-        // add_filter('mcp_adapter_default_server_config', [$this, 'extend_default_server']);
+        add_filter('mcp_adapter_default_server_config', [$this, 'extend_default_server']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
     }
 
