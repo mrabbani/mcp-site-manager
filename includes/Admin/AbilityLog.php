@@ -5,8 +5,8 @@ namespace Mrabbani\McpSiteManager\Admin;
 
 final class AbilityLog
 {
-    public const TABLE_SUFFIX = 'site_mcp_log';
-    public const OPTION_ENABLED = 'site_mcp_log_enabled';
+    public const TABLE_SUFFIX = 'mcpsm_log';
+    public const OPTION_ENABLED = 'mcpsm_log_enabled';
     public const TRIM_AT = 1000;
 
     public static function table_name(): string
