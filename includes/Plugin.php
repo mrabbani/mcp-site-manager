@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp;
+namespace Mrabbani\McpSiteManager;
 
 final class Plugin
 {

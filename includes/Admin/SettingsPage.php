@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Admin;
+namespace Mrabbani\McpSiteManager\Admin;
 
-use SiteMcp\Plugin;
+use Mrabbani\McpSiteManager\Plugin;
 
 final class SettingsPage
 {

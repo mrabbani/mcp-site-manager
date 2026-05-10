@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Tests\Support;
+namespace Mrabbani\McpSiteManager\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use SiteMcp\Support\ErrorMapper;
+use Mrabbani\McpSiteManager\Support\ErrorMapper;
 
 final class ErrorMapperTest extends TestCase
 {

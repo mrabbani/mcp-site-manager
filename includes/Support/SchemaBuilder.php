@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Support;
+namespace Mrabbani\McpSiteManager\Support;
 
 final class SchemaBuilder
 {

@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Tests\Support;
+namespace Mrabbani\McpSiteManager\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use SiteMcp\Support\OptionsAllowlist;
+use Mrabbani\McpSiteManager\Support\OptionsAllowlist;
 
 final class OptionsAllowlistTest extends TestCase
 {

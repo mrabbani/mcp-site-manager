@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Support;
+namespace Mrabbani\McpSiteManager\Support;
 
-use SiteMcp\Admin\AbilityLog;
+use Mrabbani\McpSiteManager\Admin\AbilityLog;
 
 final class AbilityRunner
 {

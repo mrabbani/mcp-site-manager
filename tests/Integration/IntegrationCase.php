@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Tests\Integration;
+namespace Mrabbani\McpSiteManager\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 

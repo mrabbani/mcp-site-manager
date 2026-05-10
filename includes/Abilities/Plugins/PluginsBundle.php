@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Abilities\Plugins;
+namespace Mrabbani\McpSiteManager\Abilities\Plugins;
 
-use SiteMcp\Abilities\AbilityBundle;
-use SiteMcp\Support\SchemaBuilder as S;
+use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
+use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
 
 final class PluginsBundle extends AbilityBundle
 {

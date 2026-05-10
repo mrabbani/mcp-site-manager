@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Abilities\Users;
+namespace Mrabbani\McpSiteManager\Abilities\Users;
 
-use SiteMcp\Abilities\AbilityBundle;
-use SiteMcp\Support\SchemaBuilder as S;
+use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
+use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
 
 final class UsersBundle extends AbilityBundle
 {

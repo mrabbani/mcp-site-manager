@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Tests\Support;
+namespace Mrabbani\McpSiteManager\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
-use SiteMcp\Support\SchemaBuilder;
+use Mrabbani\McpSiteManager\Support\SchemaBuilder;
 
 final class SchemaBuilderTest extends TestCase
 {

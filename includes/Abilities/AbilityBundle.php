@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Abilities;
+namespace Mrabbani\McpSiteManager\Abilities;
 
-use SiteMcp\Support\AbilityRunner;
-use SiteMcp\Support\RestInvoker;
+use Mrabbani\McpSiteManager\Support\AbilityRunner;
+use Mrabbani\McpSiteManager\Support\RestInvoker;
 
 abstract class AbilityBundle
 {

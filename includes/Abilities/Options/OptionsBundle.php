@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace SiteMcp\Abilities\Options;
+namespace Mrabbani\McpSiteManager\Abilities\Options;
 
-use SiteMcp\Abilities\AbilityBundle;
-use SiteMcp\Support\OptionsAllowlist;
-use SiteMcp\Support\SchemaBuilder as S;
+use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
+use Mrabbani\McpSiteManager\Support\OptionsAllowlist;
+use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
 
 final class OptionsBundle extends AbilityBundle
 {
