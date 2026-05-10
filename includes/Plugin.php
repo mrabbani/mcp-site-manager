@@ -22,7 +22,7 @@ final class Plugin
         if (!self::dependencies_met()) {
             deactivate_plugins(plugin_basename(MCPSM_FILE));
             wp_die(
-                esc_html__('Site MCP requires the MCP Adapter plugin and the Abilities API (WordPress 6.8+).', 'mcp-site-manager'),
+                esc_html__('MCP Site Manager requires the MCP Adapter plugin and the Abilities API (WordPress 6.8+).', 'mcp-site-manager'),
                 esc_html__('Plugin activation failed', 'mcp-site-manager'),
                 ['back_link' => true]
             );
@@ -63,7 +63,7 @@ final class Plugin
     public function register_category(): void
     {
         wp_register_ability_category('mcpsm', [
-            'label'       => __('Site MCP', 'mcp-site-manager'),
+            'label'       => __('MCP Site Manager', 'mcp-site-manager'),
             'description' => __('WordPress site management abilities exposed to MCP clients.', 'mcp-site-manager'),
         ]);
     }
@@ -84,7 +84,7 @@ final class Plugin
     public function render_missing_deps_notice(): void
     {
         echo '<div class="notice notice-error"><p>';
-        echo esc_html__('Site MCP is inactive: install and activate the MCP Adapter plugin (requires WordPress 6.8+).', 'mcp-site-manager');
+        echo esc_html__('MCP Site Manager is inactive: install and activate the MCP Adapter plugin (requires WordPress 6.8+).', 'mcp-site-manager');
         echo '</p></div>';
     }
 

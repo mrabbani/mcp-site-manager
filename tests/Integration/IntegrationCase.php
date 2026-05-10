@@ -23,7 +23,7 @@ abstract class IntegrationCase extends TestCase
         [$resp, $headers] = $this->raw_request('initialize', [
             'protocolVersion' => '2025-06-18',
             'capabilities'    => new \stdClass(),
-            'clientInfo'      => ['name' => 'site-mcp-tests', 'version' => '1.0'],
+            'clientInfo'      => ['name' => 'mcpsm-tests', 'version' => '1.0'],
         ], null);
 
         self::$session_id = $headers['mcp-session-id'] ?? null;

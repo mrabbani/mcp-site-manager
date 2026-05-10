@@ -1,9 +1,9 @@
 {
-    "name": "site-mcp",
+    "name": "mcp-site-manager",
     "private": true,
     "scripts": {
         "wp-env": "wp-env",
-        "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/site-mcp ./vendor/bin/phpunit --testsuite=integration"
+        "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/mcp-site-manager ./vendor/bin/phpunit --testsuite=integration"
     },
     "devDependencies": {
         "@wordpress/env": "^10.0.0"
