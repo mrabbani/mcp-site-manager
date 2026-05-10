@@ -12,15 +12,15 @@ final class PluginsBundle extends AbilityBundle
     {
         return [
             'plugins-list' => [
-                'label'       => __('List installed plugins', 'site-mcp'),
-                'description' => __('All installed plugins with status, version, description.', 'site-mcp'),
+                'label'       => __('List installed plugins', 'mcp-site-manager'),
+                'description' => __('All installed plugins with status, version, description.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('activate_plugins'),
                 'execute' => fn() => $this->list_installed(),
             ],
             'plugins-activate' => [
-                'label'       => __('Activate plugin', 'site-mcp'),
-                'description' => __('Activate by plugin file path (e.g. akismet/akismet.php).', 'site-mcp'),
+                'label'       => __('Activate plugin', 'mcp-site-manager'),
+                'description' => __('Activate by plugin file path (e.g. akismet/akismet.php).', 'mcp-site-manager'),
                 'input_schema'=> S::object(['plugin' => S::str('Plugin file path', true)]),
                 'permission_callback' => self::require_cap('activate_plugins'),
                 'execute' => function (array $a) {
@@ -31,8 +31,8 @@ final class PluginsBundle extends AbilityBundle
                 },
             ],
             'plugins-deactivate' => [
-                'label'       => __('Deactivate plugin', 'site-mcp'),
-                'description' => __('Deactivate one plugin by file path.', 'site-mcp'),
+                'label'       => __('Deactivate plugin', 'mcp-site-manager'),
+                'description' => __('Deactivate one plugin by file path.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['plugin' => S::str('Plugin file path', true)]),
                 'permission_callback' => self::require_cap('activate_plugins'),
                 'execute' => function (array $a) {
@@ -42,8 +42,8 @@ final class PluginsBundle extends AbilityBundle
                 },
             ],
             'plugins-install' => [
-                'label'       => __('Install plugin', 'site-mcp'),
-                'description' => __('Install from WordPress.org slug or a zip URL.', 'site-mcp'),
+                'label'       => __('Install plugin', 'mcp-site-manager'),
+                'description' => __('Install from WordPress.org slug or a zip URL.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'slug'    => S::str('WordPress.org plugin slug'),
                     'zip_url' => S::str('Public zip URL (alternative to slug)'),
@@ -53,15 +53,15 @@ final class PluginsBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->install($a),
             ],
             'plugins-update' => [
-                'label'       => __('Update plugin', 'site-mcp'),
-                'description' => __('Run the plugin updater for one plugin.', 'site-mcp'),
+                'label'       => __('Update plugin', 'mcp-site-manager'),
+                'description' => __('Run the plugin updater for one plugin.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['plugin' => S::str('Plugin file path', true)]),
                 'permission_callback' => self::require_cap('update_plugins'),
                 'execute' => fn(array $a) => $this->update((string) $a['plugin']),
             ],
             'plugins-delete' => [
-                'label'       => __('Delete plugin', 'site-mcp'),
-                'description' => __('Delete an installed plugin (must be inactive).', 'site-mcp'),
+                'label'       => __('Delete plugin', 'mcp-site-manager'),
+                'description' => __('Delete an installed plugin (must be inactive).', 'mcp-site-manager'),
                 'input_schema'=> S::object(['plugin' => S::str('Plugin file path', true)]),
                 'permission_callback' => self::require_cap('delete_plugins'),
                 'execute' => function (array $a) {
@@ -72,8 +72,8 @@ final class PluginsBundle extends AbilityBundle
                 },
             ],
             'plugins-search' => [
-                'label'       => __('Search WordPress.org plugins', 'site-mcp'),
-                'description' => __('Search the WP.org plugin directory.', 'site-mcp'),
+                'label'       => __('Search WordPress.org plugins', 'mcp-site-manager'),
+                'description' => __('Search the WP.org plugin directory.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'query'    => S::str('Search query', true),
                     'per_page' => S::int('Results per page', false, 1, 50),

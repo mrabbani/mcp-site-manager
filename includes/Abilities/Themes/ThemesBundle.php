@@ -12,8 +12,8 @@ final class ThemesBundle extends AbilityBundle
     {
         return [
             'themes-list' => [
-                'label'       => __('List themes', 'site-mcp'),
-                'description' => __('All installed themes with active flag, version, parent.', 'site-mcp'),
+                'label'       => __('List themes', 'mcp-site-manager'),
+                'description' => __('All installed themes with active flag, version, parent.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('switch_themes'),
                 'execute' => function () {
@@ -32,8 +32,8 @@ final class ThemesBundle extends AbilityBundle
                 },
             ],
             'themes-active' => [
-                'label'       => __('Get active theme', 'site-mcp'),
-                'description' => __('Return the currently active theme with stylesheet, name, version, parent, supports, theme.json path, and FSE template/parts directories.', 'site-mcp'),
+                'label'       => __('Get active theme', 'mcp-site-manager'),
+                'description' => __('Return the currently active theme with stylesheet, name, version, parent, supports, theme.json path, and FSE template/parts directories.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('switch_themes'),
                 'execute' => function () {
@@ -78,8 +78,8 @@ final class ThemesBundle extends AbilityBundle
                 },
             ],
             'themes-switch' => [
-                'label'       => __('Switch theme', 'site-mcp'),
-                'description' => __('Activate a theme by its stylesheet directory name.', 'site-mcp'),
+                'label'       => __('Switch theme', 'mcp-site-manager'),
+                'description' => __('Activate a theme by its stylesheet directory name.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['stylesheet' => S::str('Stylesheet directory', true)]),
                 'permission_callback' => self::require_cap('switch_themes'),
                 'execute' => function (array $a) {
@@ -91,8 +91,8 @@ final class ThemesBundle extends AbilityBundle
                 },
             ],
             'themes-install' => [
-                'label'       => __('Install theme', 'site-mcp'),
-                'description' => __('Install a theme from a wp.org slug or zip URL.', 'site-mcp'),
+                'label'       => __('Install theme', 'mcp-site-manager'),
+                'description' => __('Install a theme from a wp.org slug or zip URL.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'slug'    => S::str('wp.org theme slug'),
                     'zip_url' => S::str('Public zip URL'),
@@ -102,8 +102,8 @@ final class ThemesBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->install($a),
             ],
             'themes-update' => [
-                'label'       => __('Update theme', 'site-mcp'),
-                'description' => __('Run the theme updater for one theme.', 'site-mcp'),
+                'label'       => __('Update theme', 'mcp-site-manager'),
+                'description' => __('Run the theme updater for one theme.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['stylesheet' => S::str('Stylesheet directory', true)]),
                 'permission_callback' => self::require_cap('update_themes'),
                 'execute' => function (array $a) {
@@ -116,8 +116,8 @@ final class ThemesBundle extends AbilityBundle
                 },
             ],
             'themes-delete' => [
-                'label'       => __('Delete theme', 'site-mcp'),
-                'description' => __('Delete an installed theme (must not be active).', 'site-mcp'),
+                'label'       => __('Delete theme', 'mcp-site-manager'),
+                'description' => __('Delete an installed theme (must not be active).', 'mcp-site-manager'),
                 'input_schema'=> S::object(['stylesheet' => S::str('Stylesheet directory', true)]),
                 'permission_callback' => self::require_cap('delete_themes'),
                 'execute' => function (array $a) {

@@ -12,22 +12,22 @@ final class MenusBundle extends AbilityBundle
     {
         return [
             'menus-list' => [
-                'label'       => __('List nav menus', 'site-mcp'),
-                'description' => __('List navigation menus.', 'site-mcp'),
+                'label'       => __('List nav menus', 'mcp-site-manager'),
+                'description' => __('List navigation menus.', 'mcp-site-manager'),
                 'input_schema'=> S::object(S::paging()),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/menus', [], $a),
             ],
             'menus-get' => [
-                'label'       => __('Get a nav menu', 'site-mcp'),
+                'label'       => __('Get a nav menu', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Menu ID', true)]),
-                'description' => __('Fetch one nav menu.', 'site-mcp'),
+                'description' => __('Fetch one nav menu.', 'mcp-site-manager'),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/menus/{$a['id']}"),
             ],
             'menus-create' => [
-                'label'       => __('Create a nav menu', 'site-mcp'),
-                'description' => __('Create a new menu.', 'site-mcp'),
+                'label'       => __('Create a nav menu', 'mcp-site-manager'),
+                'description' => __('Create a new menu.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'name'        => S::str('Menu name', true),
                     'description' => S::str(),
@@ -37,8 +37,8 @@ final class MenusBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/menus', $a),
             ],
             'menus-update' => [
-                'label'       => __('Update a nav menu', 'site-mcp'),
-                'description' => __('Update menu name/description/locations.', 'site-mcp'),
+                'label'       => __('Update a nav menu', 'mcp-site-manager'),
+                'description' => __('Update menu name/description/locations.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'   => S::int('Menu ID', true),
                     'name' => S::str(),
@@ -52,15 +52,15 @@ final class MenusBundle extends AbilityBundle
                 },
             ],
             'menus-delete' => [
-                'label'       => __('Delete a nav menu', 'site-mcp'),
-                'description' => __('Delete a navigation menu.', 'site-mcp'),
+                'label'       => __('Delete a nav menu', 'mcp-site-manager'),
+                'description' => __('Delete a navigation menu.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Menu ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('DELETE', "/wp/v2/menus/{$a['id']}", [], ['force' => 'true']),
             ],
             'menu-items-list' => [
-                'label'       => __('List menu items', 'site-mcp'),
-                'description' => __('List items in nav menus.', 'site-mcp'),
+                'label'       => __('List menu items', 'mcp-site-manager'),
+                'description' => __('List items in nav menus.', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'menus' => S::int('Filter by menu ID'),
                 ])),
@@ -68,15 +68,15 @@ final class MenusBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/menu-items', [], $a),
             ],
             'menu-items-get' => [
-                'label'       => __('Get menu item', 'site-mcp'),
-                'description' => __('Fetch one menu item.', 'site-mcp'),
+                'label'       => __('Get menu item', 'mcp-site-manager'),
+                'description' => __('Fetch one menu item.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Item ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/menu-items/{$a['id']}"),
             ],
             'menu-items-create' => [
-                'label'       => __('Create menu item', 'site-mcp'),
-                'description' => __('Add a new item to a menu.', 'site-mcp'),
+                'label'       => __('Create menu item', 'mcp-site-manager'),
+                'description' => __('Add a new item to a menu.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'menus' => S::int('Menu ID', true),
                     'title' => S::str('Display label', true),
@@ -91,8 +91,8 @@ final class MenusBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/menu-items', $a),
             ],
             'menu-items-update' => [
-                'label'       => __('Update menu item', 'site-mcp'),
-                'description' => __('Edit a menu item.', 'site-mcp'),
+                'label'       => __('Update menu item', 'mcp-site-manager'),
+                'description' => __('Edit a menu item.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'    => S::int('Item ID', true),
                     'title' => S::str(),
@@ -111,15 +111,15 @@ final class MenusBundle extends AbilityBundle
                 },
             ],
             'menu-items-delete' => [
-                'label'       => __('Delete menu item', 'site-mcp'),
-                'description' => __('Delete a menu item.', 'site-mcp'),
+                'label'       => __('Delete menu item', 'mcp-site-manager'),
+                'description' => __('Delete a menu item.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Item ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('DELETE', "/wp/v2/menu-items/{$a['id']}", [], ['force' => 'true']),
             ],
             'menu-locations-list' => [
-                'label'       => __('List menu locations', 'site-mcp'),
-                'description' => __('Theme-defined navigation menu locations.', 'site-mcp'),
+                'label'       => __('List menu locations', 'mcp-site-manager'),
+                'description' => __('Theme-defined navigation menu locations.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn() => $this->rest('GET', '/wp/v2/menu-locations'),

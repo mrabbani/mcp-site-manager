@@ -12,8 +12,8 @@ final class PagesBundle extends AbilityBundle
     {
         return [
             'pages-list' => [
-                'label'       => __('List pages', 'site-mcp'),
-                'description' => __('List pages with filters (status, parent, search, paging).', 'site-mcp'),
+                'label'       => __('List pages', 'mcp-site-manager'),
+                'description' => __('List pages with filters (status, parent, search, paging).', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'status' => S::str('Comma-separated statuses'),
                     'parent' => S::int('Parent page ID'),
@@ -24,15 +24,15 @@ final class PagesBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/pages', [], $a),
             ],
             'pages-get' => [
-                'label'       => __('Get a page', 'site-mcp'),
-                'description' => __('Fetch a single page by ID.', 'site-mcp'),
+                'label'       => __('Get a page', 'mcp-site-manager'),
+                'description' => __('Fetch a single page by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Page ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/pages/{$a['id']}"),
             ],
             'pages-create' => [
-                'label'       => __('Create a page', 'site-mcp'),
-                'description' => __('Create a new page.', 'site-mcp'),
+                'label'       => __('Create a page', 'mcp-site-manager'),
+                'description' => __('Create a new page.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'title'   => S::str('Page title', true),
                     'content' => S::str('Page content'),
@@ -47,8 +47,8 @@ final class PagesBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/pages', $a),
             ],
             'pages-update' => [
-                'label'       => __('Update a page', 'site-mcp'),
-                'description' => __('Partial update of an existing page.', 'site-mcp'),
+                'label'       => __('Update a page', 'mcp-site-manager'),
+                'description' => __('Partial update of an existing page.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'      => S::int('Page ID', true),
                     'title'   => S::str(),
@@ -67,8 +67,8 @@ final class PagesBundle extends AbilityBundle
                 },
             ],
             'pages-delete' => [
-                'label'       => __('Delete a page', 'site-mcp'),
-                'description' => __('Trash or permanently delete a page.', 'site-mcp'),
+                'label'       => __('Delete a page', 'mcp-site-manager'),
+                'description' => __('Trash or permanently delete a page.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'    => S::int('Page ID', true),
                     'force' => S::bool('Skip trash and delete permanently'),

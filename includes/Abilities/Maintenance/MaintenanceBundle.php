@@ -12,22 +12,22 @@ final class MaintenanceBundle extends AbilityBundle
     {
         return [
             'cache-flush-rewrite' => [
-                'label'       => __('Flush rewrite rules', 'site-mcp'),
-                'description' => __('Re-generate URL rewrite rules.', 'site-mcp'),
+                'label'       => __('Flush rewrite rules', 'mcp-site-manager'),
+                'description' => __('Re-generate URL rewrite rules.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () { flush_rewrite_rules(false); return ['flushed' => true]; },
             ],
             'cache-flush-object' => [
-                'label'       => __('Flush object cache', 'site-mcp'),
-                'description' => __('Clear the WordPress object cache.', 'site-mcp'),
+                'label'       => __('Flush object cache', 'mcp-site-manager'),
+                'description' => __('Clear the WordPress object cache.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () { wp_cache_flush(); return ['flushed' => true]; },
             ],
             'cron-list' => [
-                'label'       => __('List scheduled cron events', 'site-mcp'),
-                'description' => __('All scheduled WP-cron events.', 'site-mcp'),
+                'label'       => __('List scheduled cron events', 'mcp-site-manager'),
+                'description' => __('All scheduled WP-cron events.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () {
@@ -50,15 +50,15 @@ final class MaintenanceBundle extends AbilityBundle
                 },
             ],
             'cron-run' => [
-                'label'       => __('Spawn cron', 'site-mcp'),
-                'description' => __('Trigger an immediate cron run.', 'site-mcp'),
+                'label'       => __('Spawn cron', 'mcp-site-manager'),
+                'description' => __('Trigger an immediate cron run.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () { spawn_cron(); return ['spawned' => true]; },
             ],
             'cron-unschedule' => [
-                'label'       => __('Unschedule cron event', 'site-mcp'),
-                'description' => __('Remove a scheduled event.', 'site-mcp'),
+                'label'       => __('Unschedule cron event', 'mcp-site-manager'),
+                'description' => __('Remove a scheduled event.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'timestamp' => S::int('Event timestamp', true),
                     'hook'      => S::str('Hook name', true),

@@ -14,8 +14,8 @@ final class PostsBundle extends AbilityBundle
     {
         return [
             'posts-list' => [
-                'label'       => __('List posts', 'site-mcp'),
-                'description' => __('List blog posts with filters (status, author, search, paging).', 'site-mcp'),
+                'label'       => __('List posts', 'mcp-site-manager'),
+                'description' => __('List blog posts with filters (status, author, search, paging).', 'mcp-site-manager'),
                 'input_schema' => S::object(array_merge(S::paging(), [
                     'status' => S::str('Comma-separated statuses (publish, draft, pending, private, future)'),
                     'author' => S::int('Author user ID'),
@@ -26,15 +26,15 @@ final class PostsBundle extends AbilityBundle
                 'execute' => fn(array $args) => $this->rest('GET', '/wp/v2/posts', [], $args),
             ],
             'posts-get' => [
-                'label'       => __('Get a post', 'site-mcp'),
-                'description' => __('Fetch a single post by ID.', 'site-mcp'),
+                'label'       => __('Get a post', 'mcp-site-manager'),
+                'description' => __('Fetch a single post by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Post ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/posts/{$a['id']}"),
             ],
             'posts-create' => [
-                'label'       => __('Create a post', 'site-mcp'),
-                'description' => __('Create a new blog post.', 'site-mcp'),
+                'label'       => __('Create a post', 'mcp-site-manager'),
+                'description' => __('Create a new blog post.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'title'         => S::str('Post title', true),
                     'content'       => S::str('Post content (HTML or block markup)'),
@@ -51,8 +51,8 @@ final class PostsBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/posts', $a),
             ],
             'posts-update' => [
-                'label'       => __('Update a post', 'site-mcp'),
-                'description' => __('Partial update of an existing post.', 'site-mcp'),
+                'label'       => __('Update a post', 'mcp-site-manager'),
+                'description' => __('Partial update of an existing post.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'            => S::int('Post ID', true),
                     'title'         => S::str('Post title'),
@@ -73,8 +73,8 @@ final class PostsBundle extends AbilityBundle
                 },
             ],
             'posts-delete' => [
-                'label'       => __('Delete a post', 'site-mcp'),
-                'description' => __('Trash or permanently delete a post.', 'site-mcp'),
+                'label'       => __('Delete a post', 'mcp-site-manager'),
+                'description' => __('Trash or permanently delete a post.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'    => S::int('Post ID', true),
                     'force' => S::bool('Skip trash and delete permanently'),

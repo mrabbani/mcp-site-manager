@@ -13,8 +13,8 @@ final class OptionsBundle extends AbilityBundle
     {
         return [
             'options-list' => [
-                'label'       => __('List allowed options', 'site-mcp'),
-                'description' => __('Returns the allowlisted site options and current values.', 'site-mcp'),
+                'label'       => __('List allowed options', 'mcp-site-manager'),
+                'description' => __('Returns the allowlisted site options and current values.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () {
@@ -26,8 +26,8 @@ final class OptionsBundle extends AbilityBundle
                 },
             ],
             'options-get' => [
-                'label'       => __('Get an option', 'site-mcp'),
-                'description' => __('Get one allowlisted option.', 'site-mcp'),
+                'label'       => __('Get an option', 'mcp-site-manager'),
+                'description' => __('Get one allowlisted option.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['key' => S::str('Option key', true)]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function (array $a) {
@@ -38,8 +38,8 @@ final class OptionsBundle extends AbilityBundle
                 },
             ],
             'options-update' => [
-                'label'       => __('Update an option', 'site-mcp'),
-                'description' => __('Update one allowlisted option.', 'site-mcp'),
+                'label'       => __('Update an option', 'mcp-site-manager'),
+                'description' => __('Update one allowlisted option.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'key'   => S::str('Option key', true),
                     'value' => ['description' => 'New value (string|number|bool depending on option)', '__required' => true],

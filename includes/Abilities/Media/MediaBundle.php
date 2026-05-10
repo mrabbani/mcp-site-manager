@@ -12,8 +12,8 @@ final class MediaBundle extends AbilityBundle
     {
         return [
             'media-list' => [
-                'label'       => __('List media', 'site-mcp'),
-                'description' => __('List attachments in the media library. Supports paging, filtering by media_type (image, video, audio, file), and filtering to attachments belonging to a specific parent post.', 'site-mcp'),
+                'label'       => __('List media', 'mcp-site-manager'),
+                'description' => __('List attachments in the media library. Supports paging, filtering by media_type (image, video, audio, file), and filtering to attachments belonging to a specific parent post.', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'media_type' => S::str('Filter by media type.', false, ['image','video','audio','file']),
                     'parent'     => S::int('Only return attachments attached to this post ID.'),
@@ -22,17 +22,17 @@ final class MediaBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/media', [], $a),
             ],
             'media-get' => [
-                'label'       => __('Get media item', 'site-mcp'),
-                'description' => __('Fetch a single attachment by ID. Returns full media object including source_url, mime_type, alt_text, caption, and media_details (sizes, dimensions).', 'site-mcp'),
+                'label'       => __('Get media item', 'mcp-site-manager'),
+                'description' => __('Fetch a single attachment by ID. Returns full media object including source_url, mime_type, alt_text, caption, and media_details (sizes, dimensions).', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Attachment ID.', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/media/{$a['id']}"),
             ],
             'media-upload' => [
-                'label'       => __('Upload media', 'site-mcp'),
+                'label'       => __('Upload media', 'mcp-site-manager'),
                 'description' => __(
                     'Upload an image or file to the WordPress media library. Provide EITHER source_url (a publicly reachable HTTP/HTTPS URL the server will download) OR a base64 payload along with filename and mime_type. To attach the result to a post, set parent to the post ID. To also set it as that post\'s featured image, set as_featured=true (requires parent). Returns the created attachment object including its id, source_url, and media_details.',
-                    'site-mcp'
+                    'mcp-site-manager'
                 ),
                 'input_schema'=> S::object([
                     'source_url'  => S::str('Publicly reachable URL the server will download. Mutually exclusive with base64.'),
@@ -49,8 +49,8 @@ final class MediaBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->upload($a),
             ],
             'media-update' => [
-                'label'       => __('Update media metadata', 'site-mcp'),
-                'description' => __('Update an existing attachment\'s metadata. Only the fields you provide are changed. The file itself is not replaced — to change the binary, delete and re-upload.', 'site-mcp'),
+                'label'       => __('Update media metadata', 'mcp-site-manager'),
+                'description' => __('Update an existing attachment\'s metadata. Only the fields you provide are changed. The file itself is not replaced — to change the binary, delete and re-upload.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'          => S::int('Attachment ID to update.', true),
                     'title'       => S::str('New title shown in the media library.'),
@@ -65,8 +65,8 @@ final class MediaBundle extends AbilityBundle
                 },
             ],
             'media-delete' => [
-                'label'       => __('Delete media', 'site-mcp'),
-                'description' => __('Permanently delete an attachment and its files (force-deleted, no trash). If the attachment is set as a featured image on any post, that link is removed automatically. This cannot be undone.', 'site-mcp'),
+                'label'       => __('Delete media', 'mcp-site-manager'),
+                'description' => __('Permanently delete an attachment and its files (force-deleted, no trash). If the attachment is set as a featured image on any post, that link is removed automatically. This cannot be undone.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Attachment ID to delete.', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('DELETE', "/wp/v2/media/{$a['id']}", [], ['force' => 'true']),

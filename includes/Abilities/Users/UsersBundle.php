@@ -12,8 +12,8 @@ final class UsersBundle extends AbilityBundle
     {
         return [
             'users-list' => [
-                'label'       => __('List users', 'site-mcp'),
-                'description' => __('List site users.', 'site-mcp'),
+                'label'       => __('List users', 'mcp-site-manager'),
+                'description' => __('List site users.', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'roles' => S::str('Comma-separated role slugs'),
                 ])),
@@ -21,22 +21,22 @@ final class UsersBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/users', [], $a),
             ],
             'users-get' => [
-                'label'       => __('Get a user', 'site-mcp'),
-                'description' => __('Fetch a single user by ID.', 'site-mcp'),
+                'label'       => __('Get a user', 'mcp-site-manager'),
+                'description' => __('Fetch a single user by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('User ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/users/{$a['id']}"),
             ],
             'users-me' => [
-                'label'       => __('Get current user', 'site-mcp'),
-                'description' => __('Return the authenticated user.', 'site-mcp'),
+                'label'       => __('Get current user', 'mcp-site-manager'),
+                'description' => __('Return the authenticated user.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn() => $this->rest('GET', '/wp/v2/users/me'),
             ],
             'users-create' => [
-                'label'       => __('Create a user', 'site-mcp'),
-                'description' => __('Create a new user account.', 'site-mcp'),
+                'label'       => __('Create a user', 'mcp-site-manager'),
+                'description' => __('Create a new user account.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'username' => S::str('Login name', true),
                     'email'    => S::str('Email address', true),
@@ -50,8 +50,8 @@ final class UsersBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/users', $a),
             ],
             'users-update' => [
-                'label'       => __('Update a user', 'site-mcp'),
-                'description' => __('Edit a user account.', 'site-mcp'),
+                'label'       => __('Update a user', 'mcp-site-manager'),
+                'description' => __('Edit a user account.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'    => S::int('User ID', true),
                     'email' => S::str(),
@@ -68,8 +68,8 @@ final class UsersBundle extends AbilityBundle
                 },
             ],
             'users-delete' => [
-                'label'       => __('Delete a user', 'site-mcp'),
-                'description' => __('Delete a user; reassign content to another user ID.', 'site-mcp'),
+                'label'       => __('Delete a user', 'mcp-site-manager'),
+                'description' => __('Delete a user; reassign content to another user ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'         => S::int('User ID to delete', true),
                     'reassign'   => S::int('User ID inheriting their content', true),

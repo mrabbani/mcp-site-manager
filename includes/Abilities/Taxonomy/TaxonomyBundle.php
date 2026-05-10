@@ -12,15 +12,15 @@ final class TaxonomyBundle extends AbilityBundle
     {
         return [
             'taxonomies-list' => [
-                'label'       => __('List taxonomies', 'site-mcp'),
-                'description' => __('List taxonomies exposed in the REST API.', 'site-mcp'),
+                'label'       => __('List taxonomies', 'mcp-site-manager'),
+                'description' => __('List taxonomies exposed in the REST API.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn() => $this->rest('GET', '/wp/v2/taxonomies'),
             ],
             'terms-list' => [
-                'label'       => __('List terms', 'site-mcp'),
-                'description' => __('List terms of a taxonomy (e.g. category, post_tag, product_cat).', 'site-mcp'),
+                'label'       => __('List terms', 'mcp-site-manager'),
+                'description' => __('List terms of a taxonomy (e.g. category, post_tag, product_cat).', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'taxonomy' => S::str('Taxonomy slug', true),
                     'parent'   => S::int('Parent term ID'),
@@ -32,8 +32,8 @@ final class TaxonomyBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->dispatch('GET', $a, []),
             ],
             'terms-get' => [
-                'label'       => __('Get a term', 'site-mcp'),
-                'description' => __('Fetch one term by ID.', 'site-mcp'),
+                'label'       => __('Get a term', 'mcp-site-manager'),
+                'description' => __('Fetch one term by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'taxonomy' => S::str('Taxonomy slug', true),
                     'id'       => S::int('Term ID', true),
@@ -42,8 +42,8 @@ final class TaxonomyBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->dispatch('GET', $a, [], (int) $a['id']),
             ],
             'terms-create' => [
-                'label'       => __('Create a term', 'site-mcp'),
-                'description' => __('Create a new taxonomy term.', 'site-mcp'),
+                'label'       => __('Create a term', 'mcp-site-manager'),
+                'description' => __('Create a new taxonomy term.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'taxonomy'    => S::str('Taxonomy slug', true),
                     'name'        => S::str('Term name', true),
@@ -59,8 +59,8 @@ final class TaxonomyBundle extends AbilityBundle
                 },
             ],
             'terms-update' => [
-                'label'       => __('Update a term', 'site-mcp'),
-                'description' => __('Partial update of an existing term.', 'site-mcp'),
+                'label'       => __('Update a term', 'mcp-site-manager'),
+                'description' => __('Partial update of an existing term.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'taxonomy'    => S::str('Taxonomy slug', true),
                     'id'          => S::int('Term ID', true),
@@ -78,8 +78,8 @@ final class TaxonomyBundle extends AbilityBundle
                 },
             ],
             'terms-delete' => [
-                'label'       => __('Delete a term', 'site-mcp'),
-                'description' => __('Permanently delete a term.', 'site-mcp'),
+                'label'       => __('Delete a term', 'mcp-site-manager'),
+                'description' => __('Permanently delete a term.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'taxonomy' => S::str('Taxonomy slug', true),
                     'id'       => S::int('Term ID', true),

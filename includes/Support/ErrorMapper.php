@@ -15,14 +15,14 @@ final class ErrorMapper
         if ($error instanceof \Throwable) {
             return [
                 'code'    => self::CODE_INTERNAL,
-                'message' => self::is_debug() ? $error->getMessage() : __('Internal server error', 'site-mcp'),
+                'message' => self::is_debug() ? $error->getMessage() : __('Internal server error', 'mcp-site-manager'),
                 'data'    => self::is_debug() ? ['exception' => get_class($error), 'trace' => $error->getTraceAsString()] : new \stdClass(),
             ];
         }
 
         $data    = is_array($error->get_error_data()) ? $error->get_error_data() : [];
         $status  = isset($data['status']) ? (int) $data['status'] : 500;
-        $message = $error->get_error_message() ?: __('Unknown error', 'site-mcp');
+        $message = $error->get_error_message() ?: __('Unknown error', 'mcp-site-manager');
 
         if ($status === 401 || $status === 403) {
             return [
@@ -40,7 +40,7 @@ final class ErrorMapper
         }
         return [
             'code'    => self::CODE_INTERNAL,
-            'message' => self::is_debug() ? $message : __('Internal server error', 'site-mcp'),
+            'message' => self::is_debug() ? $message : __('Internal server error', 'mcp-site-manager'),
             'data'    => self::is_debug() ? array_merge(['http_status' => $status], $data) : new \stdClass(),
         ];
     }

@@ -12,8 +12,8 @@ final class CommentsBundle extends AbilityBundle
     {
         return [
             'comments-list' => [
-                'label'       => __('List comments', 'site-mcp'),
-                'description' => __('List comments with filters.', 'site-mcp'),
+                'label'       => __('List comments', 'mcp-site-manager'),
+                'description' => __('List comments with filters.', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'post'   => S::int('Filter by post ID'),
                     'status' => S::str('', false, ['approve','hold','spam','trash']),
@@ -23,15 +23,15 @@ final class CommentsBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('GET', '/wp/v2/comments', [], $a),
             ],
             'comments-get' => [
-                'label'       => __('Get a comment', 'site-mcp'),
-                'description' => __('Fetch one comment by ID.', 'site-mcp'),
+                'label'       => __('Get a comment', 'mcp-site-manager'),
+                'description' => __('Fetch one comment by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object(['id' => S::int('Comment ID', true)]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn(array $a) => $this->rest('GET', "/wp/v2/comments/{$a['id']}"),
             ],
             'comments-create' => [
-                'label'       => __('Create a comment', 'site-mcp'),
-                'description' => __('Create a comment on a post.', 'site-mcp'),
+                'label'       => __('Create a comment', 'mcp-site-manager'),
+                'description' => __('Create a comment on a post.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'post'    => S::int('Post ID', true),
                     'content' => S::str('Comment HTML', true),
@@ -43,8 +43,8 @@ final class CommentsBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->rest('POST', '/wp/v2/comments', $a),
             ],
             'comments-update' => [
-                'label'       => __('Update a comment', 'site-mcp'),
-                'description' => __('Edit comment content.', 'site-mcp'),
+                'label'       => __('Update a comment', 'mcp-site-manager'),
+                'description' => __('Edit comment content.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'      => S::int('Comment ID', true),
                     'content' => S::str(),
@@ -57,8 +57,8 @@ final class CommentsBundle extends AbilityBundle
                 },
             ],
             'comments-delete' => [
-                'label'       => __('Delete a comment', 'site-mcp'),
-                'description' => __('Trash or permanently delete a comment.', 'site-mcp'),
+                'label'       => __('Delete a comment', 'mcp-site-manager'),
+                'description' => __('Trash or permanently delete a comment.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'    => S::int('Comment ID', true),
                     'force' => S::bool('Skip trash'),
@@ -71,8 +71,8 @@ final class CommentsBundle extends AbilityBundle
                 },
             ],
             'comments-moderate' => [
-                'label'       => __('Moderate a comment', 'site-mcp'),
-                'description' => __('Set comment status (approve/hold/spam/trash/unspam).', 'site-mcp'),
+                'label'       => __('Moderate a comment', 'mcp-site-manager'),
+                'description' => __('Set comment status (approve/hold/spam/trash/unspam).', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'id'     => S::int('Comment ID', true),
                     'status' => S::str('Target status', true, ['approve','hold','spam','trash','unspam']),

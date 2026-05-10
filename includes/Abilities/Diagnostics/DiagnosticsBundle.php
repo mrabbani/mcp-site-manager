@@ -12,8 +12,8 @@ final class DiagnosticsBundle extends AbilityBundle
     {
         return [
             'health-overview' => [
-                'label'       => __('Site health overview', 'site-mcp'),
-                'description' => __('WP/PHP/MySQL versions, active theme, plugin counts, debug flags.', 'site-mcp'),
+                'label'       => __('Site health overview', 'mcp-site-manager'),
+                'description' => __('WP/PHP/MySQL versions, active theme, plugin counts, debug flags.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () {
@@ -38,8 +38,8 @@ final class DiagnosticsBundle extends AbilityBundle
                 },
             ],
             'health-debug-log-tail' => [
-                'label'       => __('Tail debug log', 'site-mcp'),
-                'description' => __('Return the last N lines of wp-content/debug.log if WP_DEBUG_LOG is enabled.', 'site-mcp'),
+                'label'       => __('Tail debug log', 'mcp-site-manager'),
+                'description' => __('Return the last N lines of wp-content/debug.log if WP_DEBUG_LOG is enabled.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'lines' => S::int('Lines from the end (1-500)', false, 1, 500),
                 ]),
@@ -58,8 +58,8 @@ final class DiagnosticsBundle extends AbilityBundle
                 },
             ],
             'health-rest-status' => [
-                'label'       => __('REST API status', 'site-mcp'),
-                'description' => __('Whether the REST API namespace and app-password auth are available.', 'site-mcp'),
+                'label'       => __('REST API status', 'mcp-site-manager'),
+                'description' => __('Whether the REST API namespace and app-password auth are available.', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function () {

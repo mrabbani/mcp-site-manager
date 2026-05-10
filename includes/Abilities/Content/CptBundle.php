@@ -12,15 +12,15 @@ final class CptBundle extends AbilityBundle
     {
         return [
             'cpt-list-types' => [
-                'label'       => __('List custom post types', 'site-mcp'),
-                'description' => __('List all post types exposed in the REST API (show_in_rest=true).', 'site-mcp'),
+                'label'       => __('List custom post types', 'mcp-site-manager'),
+                'description' => __('List all post types exposed in the REST API (show_in_rest=true).', 'mcp-site-manager'),
                 'input_schema'=> S::object([]),
                 'permission_callback' => self::logged_in(),
                 'execute' => fn() => $this->rest('GET', '/wp/v2/types'),
             ],
             'cpt-list' => [
-                'label'       => __('List CPT entries', 'site-mcp'),
-                'description' => __('List entries of a custom post type. Provide post_type slug.', 'site-mcp'),
+                'label'       => __('List CPT entries', 'mcp-site-manager'),
+                'description' => __('List entries of a custom post type. Provide post_type slug.', 'mcp-site-manager'),
                 'input_schema'=> S::object(array_merge(S::paging(), [
                     'post_type' => S::str('Post type slug (e.g. product, dokan_vendor_request)', true),
                     'status'    => S::str('Comma-separated statuses'),
@@ -29,8 +29,8 @@ final class CptBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->dispatch_cpt('GET', $a, []),
             ],
             'cpt-get' => [
-                'label'       => __('Get a CPT entry', 'site-mcp'),
-                'description' => __('Fetch one custom post type entry by ID.', 'site-mcp'),
+                'label'       => __('Get a CPT entry', 'mcp-site-manager'),
+                'description' => __('Fetch one custom post type entry by ID.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'post_type' => S::str('Post type slug', true),
                     'id'        => S::int('Entry ID', true),
@@ -39,8 +39,8 @@ final class CptBundle extends AbilityBundle
                 'execute' => fn(array $a) => $this->dispatch_cpt('GET', $a, [], (int) $a['id']),
             ],
             'cpt-create' => [
-                'label'       => __('Create a CPT entry', 'site-mcp'),
-                'description' => __('Create a new custom post type entry. Body is the REST payload for that type.', 'site-mcp'),
+                'label'       => __('Create a CPT entry', 'mcp-site-manager'),
+                'description' => __('Create a new custom post type entry. Body is the REST payload for that type.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'post_type' => S::str('Post type slug', true),
                     'title'     => S::str('Title', true),
@@ -55,8 +55,8 @@ final class CptBundle extends AbilityBundle
                 },
             ],
             'cpt-update' => [
-                'label'       => __('Update a CPT entry', 'site-mcp'),
-                'description' => __('Partial update of an existing CPT entry.', 'site-mcp'),
+                'label'       => __('Update a CPT entry', 'mcp-site-manager'),
+                'description' => __('Partial update of an existing CPT entry.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'post_type' => S::str('Post type slug', true),
                     'id'        => S::int('Entry ID', true),
@@ -73,8 +73,8 @@ final class CptBundle extends AbilityBundle
                 },
             ],
             'cpt-delete' => [
-                'label'       => __('Delete a CPT entry', 'site-mcp'),
-                'description' => __('Trash or permanently delete a CPT entry.', 'site-mcp'),
+                'label'       => __('Delete a CPT entry', 'mcp-site-manager'),
+                'description' => __('Trash or permanently delete a CPT entry.', 'mcp-site-manager'),
                 'input_schema'=> S::object([
                     'post_type' => S::str('Post type slug', true),
                     'id'        => S::int('Entry ID', true),
