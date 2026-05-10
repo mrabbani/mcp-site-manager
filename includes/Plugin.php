@@ -49,7 +49,7 @@ final class Plugin
 
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
         add_action('wp_abilities_api_init', [$this, 'register_abilities']);
-        add_action('mcp_adapter_init', [$this, 'register_server']);
+        // add_filter('mcp_adapter_default_server_config', [$this, 'extend_default_server']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
     }
 
@@ -68,9 +68,17 @@ final class Plugin
         ]);
     }
 
-    public function register_server(\WP\MCP\Core\McpAdapter $adapter): void
+    /**
+     * @param mixed $config
+     */
+    public function extend_default_server($config): array
     {
-        Server::register($adapter, $this->ability_names());
+        if (!is_array($config)) {
+            $config = [];
+        }
+        $existing = isset($config['tools']) && is_array($config['tools']) ? $config['tools'] : [];
+        $config['tools'] = array_values(array_unique(array_merge($existing, $this->ability_names())));
+        return $config;
     }
 
     public function render_missing_deps_notice(): void

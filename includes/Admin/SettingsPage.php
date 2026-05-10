@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace SiteMcp\Admin;
 
 use SiteMcp\Plugin;
-use SiteMcp\Server;
 
 final class SettingsPage
 {
@@ -27,7 +26,7 @@ final class SettingsPage
     {
         if (!current_user_can('manage_options')) wp_die();
 
-        $endpoint = rest_url('site-mcp/v1/mcp');
+        $endpoint = rest_url('mcp/mcp-adapter-default-server');
         $deps_ok  = Plugin::dependencies_met();
         $apppw_ok = function_exists('wp_is_application_passwords_available') ? wp_is_application_passwords_available() : true;
 
@@ -43,7 +42,7 @@ final class SettingsPage
             <ul>
                 <li><?php echo self::dot($deps_ok); ?> <?php esc_html_e('MCP Adapter & Abilities API available', 'site-mcp'); ?></li>
                 <li><?php echo self::dot($apppw_ok); ?> <?php esc_html_e('Application Passwords enabled', 'site-mcp'); ?></li>
-                <li><?php echo self::dot(true); ?> <?php printf(esc_html__('Server registered as %s', 'site-mcp'), '<code>' . esc_html(Server::ID) . '</code>'); ?></li>
+                <li><?php echo self::dot(true); ?> <?php printf(esc_html__('Abilities exposed via %s', 'site-mcp'), '<code>mcp-adapter-default-server</code>'); ?></li>
             </ul>
 
             <h2><?php esc_html_e('Connection', 'site-mcp'); ?></h2>

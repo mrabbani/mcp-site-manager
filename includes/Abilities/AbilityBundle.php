@@ -37,6 +37,16 @@ abstract class AbilityBundle
                 'execute_callback'    => function ($args) use ($name, $spec) {
                     return AbilityRunner::run($name, fn() => ($spec['execute'])((array) $args));
                 },
+                'meta'                => array_merge(
+                    [
+                        'show_in_rest' => true,
+                        'mcp'          => [
+                            'public' => true,
+                            'type'   => $spec['mcp_type'] ?? 'tool',
+                        ],
+                    ],
+                    (array) ($spec['meta'] ?? [])
+                ),
             ]);
         }
     }

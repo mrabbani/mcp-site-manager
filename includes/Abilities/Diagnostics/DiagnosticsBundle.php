@@ -67,7 +67,7 @@ final class DiagnosticsBundle extends AbilityBundle
                         'rest_url'              => rest_url(),
                         'rest_prefix'           => rest_get_url_prefix(),
                         'app_passwords_enabled' => function_exists('wp_is_application_passwords_available') ? wp_is_application_passwords_available() : true,
-                        'site_mcp_endpoint'     => rest_url('site-mcp/v1/mcp'),
+                        'site_mcp_endpoint'     => rest_url('mcp/mcp-adapter-default-server'),
                     ];
                 },
             ],

@@ -31,6 +31,52 @@ final class ThemesBundle extends AbilityBundle
                     return ['items' => $items, 'total' => count($items)];
                 },
             ],
+            'themes-active' => [
+                'label'       => __('Get active theme', 'site-mcp'),
+                'description' => __('Return the currently active theme with stylesheet, name, version, parent, supports, theme.json path, and FSE template/parts directories.', 'site-mcp'),
+                'input_schema'=> S::object([]),
+                'permission_callback' => self::require_cap('switch_themes'),
+                'execute' => function () {
+                    $theme    = wp_get_theme();
+                    $parent   = $theme->parent();
+                    $dir      = $theme->get_stylesheet_directory();
+                    $tjson    = file_exists($dir . '/theme.json') ? $dir . '/theme.json' : null;
+                    $is_block = function_exists('wp_is_block_theme') ? wp_is_block_theme() : false;
+
+                    return [
+                        'stylesheet'        => $theme->get_stylesheet(),
+                        'template'          => $theme->get_template(),
+                        'name'              => $theme->get('Name'),
+                        'version'           => $theme->get('Version'),
+                        'description'       => wp_strip_all_tags((string) $theme->get('Description')),
+                        'author'            => wp_strip_all_tags((string) $theme->get('Author')),
+                        'theme_uri'         => (string) $theme->get('ThemeURI'),
+                        'text_domain'       => (string) $theme->get('TextDomain'),
+                        'requires_wp'       => (string) $theme->get('RequiresWP'),
+                        'requires_php'      => (string) $theme->get('RequiresPHP'),
+                        'parent'            => $parent ? $parent->get_stylesheet() : null,
+                        'is_block_theme'    => (bool) $is_block,
+                        'theme_supports'    => array_values(array_filter([
+                            'post-thumbnails', 'title-tag', 'wp-block-styles', 'editor-styles',
+                            'responsive-embeds', 'html5', 'align-wide', 'block-templates',
+                            'block-template-parts', 'appearance-tools',
+                        ], 'current_theme_supports')),
+                        'paths'             => [
+                            'stylesheet_dir'  => $dir,
+                            'template_dir'    => $theme->get_template_directory(),
+                            'theme_json'      => $tjson,
+                            'templates_dir'   => is_dir($dir . '/templates') ? $dir . '/templates' : null,
+                            'parts_dir'       => is_dir($dir . '/parts') ? $dir . '/parts' : null,
+                            'patterns_dir'    => is_dir($dir . '/patterns') ? $dir . '/patterns' : null,
+                            'styles_dir'      => is_dir($dir . '/styles') ? $dir . '/styles' : null,
+                        ],
+                        'urls'              => [
+                            'stylesheet_uri'  => $theme->get_stylesheet_directory_uri(),
+                            'template_uri'    => $theme->get_template_directory_uri(),
+                        ],
+                    ];
+                },
+            ],
             'themes-switch' => [
                 'label'       => __('Switch theme', 'site-mcp'),
                 'description' => __('Activate a theme by its stylesheet directory name.', 'site-mcp'),

@@ -34,3 +34,38 @@ register_activation_hook(__FILE__, [\SiteMcp\Plugin::class, 'on_activate']);
 register_deactivation_hook(__FILE__, [\SiteMcp\Plugin::class, 'on_deactivate']);
 
 add_action('plugins_loaded', [\SiteMcp\Plugin::class, 'boot'], 5);
+
+
+add_action( 'abilities_api_init', function () {
+    wp_register_ability( 'my-ai/get-site-info', [
+        'label'               => 'Get site info',
+        'description'         => 'Returns basic WordPress site information.',
+        'input_schema'        => [
+            'type'       => 'object',
+            'properties' => [
+                'fields' => [
+                    'type'  => 'array',
+                    'items' => [ 'type' => 'string' ],
+                ],
+            ],
+        ],
+        'output_schema'       => [
+            'type'       => 'object',
+            'properties' => [
+                'name'        => [ 'type' => 'string' ],
+                'description' => [ 'type' => 'string' ],
+                'url'         => [ 'type' => 'string' ],
+            ],
+        ],
+        'execute_callback'    => function ( $input ) {
+            return [
+                'name'        => get_bloginfo( 'name' ),
+                'description' => get_bloginfo( 'description' ),
+                'url'         => get_bloginfo( 'url' ),
+            ];
+        },
+        'permission_callback' => function () {
+            return current_user_can( 'read' );
+        },
+    ] );
+} );
