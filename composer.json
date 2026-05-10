@@ -1,8 +1,11 @@
 {
-    "name": "site-mcp/site-mcp",
-    "description": "Expose WordPress site management to MCP-aware AI clients.",
+    "name": "mrabbani/mcp-site-manager",
+    "description": "Manage WordPress from Claude, ChatGPT, Cursor and other MCP clients via the MCP Adapter.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
+    "authors": [
+        { "name": "mrabbani", "homepage": "https://profiles.wordpress.org/mrabbani/" }
+    ],
     "require": {
         "php": ">=8.0"
     },
@@ -11,10 +14,10 @@
         "yoast/phpunit-polyfills": "^2.0"
     },
     "autoload": {
-        "psr-4": { "SiteMcp\\": "includes/" }
+        "psr-4": { "Mrabbani\\McpSiteManager\\": "includes/" }
     },
     "autoload-dev": {
-        "psr-4": { "SiteMcp\\Tests\\": "tests/" }
+        "psr-4": { "Mrabbani\\McpSiteManager\\Tests\\": "tests/" }
     },
     "config": {
         "sort-packages": true
