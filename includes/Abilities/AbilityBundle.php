@@ -9,7 +9,7 @@ use Mrabbani\McpSiteManager\Support\RestInvoker;
 abstract class AbilityBundle
 {
     /**
-     * Map of local ability name (without "site-mcp/" prefix) to spec:
+     * Map of local ability name (without "mcpsm/" prefix) to spec:
      *  [
      *    'label'              => string,
      *    'description'        => string,
@@ -26,11 +26,11 @@ abstract class AbilityBundle
     public function register(): void
     {
         foreach ($this->abilities() as $local => $spec) {
-            $name = "site-mcp/$local";
+            $name = "mcpsm/$local";
             wp_register_ability($name, [
                 'label'               => $spec['label'],
                 'description'         => $spec['description'],
-                'category'            => 'mcp-site-manager',
+                'category'            => 'mcpsm',
                 'input_schema'        => $spec['input_schema']  ?? ['type' => 'object', 'properties' => new \stdClass()],
                 'output_schema'       => $spec['output_schema'] ?? ['type' => 'object'],
                 'permission_callback' => $spec['permission_callback'] ?? '__return_true',

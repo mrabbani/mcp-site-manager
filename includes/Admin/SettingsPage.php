@@ -47,8 +47,8 @@ final class SettingsPage
 
             <h2><?php esc_html_e('Connection', 'mcp-site-manager'); ?></h2>
             <p><strong><?php esc_html_e('MCP Endpoint:', 'mcp-site-manager'); ?></strong>
-                <code id="site-mcp-url"><?php echo esc_html($endpoint); ?></code>
-                <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('site-mcp-url').innerText)"><?php esc_html_e('Copy', 'mcp-site-manager'); ?></button>
+                <code id="mcpsm-url"><?php echo esc_html($endpoint); ?></code>
+                <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('mcpsm-url').innerText)"><?php esc_html_e('Copy', 'mcp-site-manager'); ?></button>
             </p>
             <p><?php
                 printf(
@@ -126,7 +126,7 @@ final class SettingsPage
         $out = [];
         if (!function_exists('wp_get_abilities')) return $out;
         foreach (wp_get_abilities() as $name => $ability) {
-            if (str_starts_with((string) $name, 'site-mcp/')) {
+            if (str_starts_with((string) $name, 'mcpsm/')) {
                 $desc = method_exists($ability, 'get_description') ? $ability->get_description() : '';
                 $out[$name] = $desc;
             }

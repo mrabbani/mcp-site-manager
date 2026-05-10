@@ -62,7 +62,7 @@ final class Plugin
 
     public function register_category(): void
     {
-        wp_register_ability_category('mcp-site-manager', [
+        wp_register_ability_category('mcpsm', [
             'label'       => __('Site MCP', 'mcp-site-manager'),
             'description' => __('WordPress site management abilities exposed to MCP clients.', 'mcp-site-manager'),
         ]);
@@ -114,7 +114,7 @@ final class Plugin
         $names = [];
         foreach ($this->bundles() as $bundle) {
             foreach (array_keys($bundle->abilities()) as $local) {
-                $names[] = "site-mcp/$local";
+                $names[] = "mcpsm/$local";
             }
         }
         return $names;
