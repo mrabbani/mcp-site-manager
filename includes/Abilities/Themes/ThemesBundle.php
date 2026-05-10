@@ -85,7 +85,7 @@ final class ThemesBundle extends AbilityBundle
                 'execute' => function (array $a) {
                     $stylesheet = (string) $a['stylesheet'];
                     $theme = wp_get_theme($stylesheet);
-                    if (!$theme->exists()) return new \WP_Error('site_mcp_theme_missing', 'Theme not installed', ['status' => 404]);
+                    if (!$theme->exists()) return new \WP_Error('mcpsm_theme_missing', 'Theme not installed', ['status' => 404]);
                     switch_theme($stylesheet);
                     return ['stylesheet' => $stylesheet, 'active' => true];
                 },
@@ -142,7 +142,7 @@ final class ThemesBundle extends AbilityBundle
     {
         $this->load();
         if (empty($a['slug']) && empty($a['zip_url'])) {
-            return new \WP_Error('site_mcp_theme_input', 'Provide slug or zip_url', ['status' => 400]);
+            return new \WP_Error('mcpsm_theme_input', 'Provide slug or zip_url', ['status' => 400]);
         }
         $source = $a['zip_url'] ?? null;
         if (!$source) {
@@ -153,7 +153,7 @@ final class ThemesBundle extends AbilityBundle
         $upgrader = new \Theme_Upgrader(new \WP_Ajax_Upgrader_Skin());
         $r = $upgrader->install($source);
         if (is_wp_error($r) || $r === false) {
-            return is_wp_error($r) ? $r : new \WP_Error('site_mcp_theme_install_failed', 'Install failed', ['status' => 500]);
+            return is_wp_error($r) ? $r : new \WP_Error('mcpsm_theme_install_failed', 'Install failed', ['status' => 500]);
         }
         $stylesheet = $upgrader->theme_info() ? $upgrader->theme_info()->get_stylesheet() : null;
         $out = ['stylesheet' => $stylesheet, 'installed' => true, 'active' => false];

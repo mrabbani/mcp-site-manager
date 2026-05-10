@@ -46,11 +46,11 @@ final class DiagnosticsBundle extends AbilityBundle
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function (array $a) {
                     if (!(defined('WP_DEBUG_LOG') && WP_DEBUG_LOG)) {
-                        return new \WP_Error('site_mcp_debug_log_off', 'WP_DEBUG_LOG is not enabled', ['status' => 400]);
+                        return new \WP_Error('mcpsm_debug_log_off', 'WP_DEBUG_LOG is not enabled', ['status' => 400]);
                     }
                     $path = is_string(WP_DEBUG_LOG) ? WP_DEBUG_LOG : WP_CONTENT_DIR . '/debug.log';
                     if (!is_readable($path)) {
-                        return new \WP_Error('site_mcp_debug_log_missing', 'Debug log not found or unreadable', ['status' => 404]);
+                        return new \WP_Error('mcpsm_debug_log_missing', 'Debug log not found or unreadable', ['status' => 404]);
                     }
                     $n = max(1, min(500, (int) ($a['lines'] ?? 100)));
                     $lines = self::tail($path, $n);
@@ -67,7 +67,7 @@ final class DiagnosticsBundle extends AbilityBundle
                         'rest_url'              => rest_url(),
                         'rest_prefix'           => rest_get_url_prefix(),
                         'app_passwords_enabled' => function_exists('wp_is_application_passwords_available') ? wp_is_application_passwords_available() : true,
-                        'site_mcp_endpoint'     => rest_url('mcp/mcp-adapter-default-server'),
+                        'mcpsm_endpoint'     => rest_url('mcp/mcp-adapter-default-server'),
                     ];
                 },
             ],

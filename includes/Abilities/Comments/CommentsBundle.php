@@ -81,7 +81,7 @@ final class CommentsBundle extends AbilityBundle
                 'execute' => function (array $a) {
                     $ok = wp_set_comment_status((int) $a['id'], (string) $a['status'], true);
                     if (is_wp_error($ok)) return $ok;
-                    if (!$ok) return new \WP_Error('site_mcp_moderate_failed', 'Could not set status', ['status' => 500]);
+                    if (!$ok) return new \WP_Error('mcpsm_moderate_failed', 'Could not set status', ['status' => 500]);
                     return ['id' => (int) $a['id'], 'status' => (string) $a['status']];
                 },
             ],

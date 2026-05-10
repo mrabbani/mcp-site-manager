@@ -94,7 +94,7 @@ final class CptBundle extends AbilityBundle
     {
         $type = get_post_type_object((string) $args['post_type']);
         if (!$type || empty($type->show_in_rest)) {
-            return new \WP_Error('site_mcp_cpt_not_rest', sprintf('Post type "%s" is not REST-enabled.', $args['post_type']), ['status' => 400]);
+            return new \WP_Error('mcpsm_cpt_not_rest', sprintf('Post type "%s" is not REST-enabled.', $args['post_type']), ['status' => 400]);
         }
         $base = $type->rest_namespace ?? 'wp/v2';
         $rest_base = $type->rest_base ?: $type->name;

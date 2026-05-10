@@ -18,8 +18,8 @@ final class SettingsPage
             self::SLUG,
             [self::class, 'render']
         );
-        add_action('admin_post_site_mcp_clear_log', [self::class, 'handle_clear_log']);
-        add_action('admin_post_site_mcp_toggle_log', [self::class, 'handle_toggle_log']);
+        add_action('admin_post_mcpsm_clear_log', [self::class, 'handle_clear_log']);
+        add_action('admin_post_mcpsm_toggle_log', [self::class, 'handle_toggle_log']);
     }
 
     public static function render(): void
@@ -70,13 +70,13 @@ final class SettingsPage
 
             <h2><?php esc_html_e('Activity log', 'mcp-site-manager'); ?></h2>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
-                <?php wp_nonce_field('site_mcp_toggle_log'); ?>
-                <input type="hidden" name="action" value="site_mcp_toggle_log">
+                <?php wp_nonce_field('mcpsm_toggle_log'); ?>
+                <input type="hidden" name="action" value="mcpsm_toggle_log">
                 <button class="button"><?php echo $log_on ? esc_html__('Disable logging', 'mcp-site-manager') : esc_html__('Enable logging', 'mcp-site-manager'); ?></button>
             </form>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
-                <?php wp_nonce_field('site_mcp_clear_log'); ?>
-                <input type="hidden" name="action" value="site_mcp_clear_log">
+                <?php wp_nonce_field('mcpsm_clear_log'); ?>
+                <input type="hidden" name="action" value="mcpsm_clear_log">
                 <button class="button"><?php esc_html_e('Clear log', 'mcp-site-manager'); ?></button>
             </form>
             <table class="widefat striped" style="margin-top:1em;"><thead><tr>
@@ -105,7 +105,7 @@ final class SettingsPage
     public static function handle_clear_log(): void
     {
         if (!current_user_can('manage_options')) wp_die();
-        check_admin_referer('site_mcp_clear_log');
+        check_admin_referer('mcpsm_clear_log');
         AbilityLog::clear();
         wp_safe_redirect(admin_url('options-general.php?page=' . self::SLUG));
         exit;
@@ -114,7 +114,7 @@ final class SettingsPage
     public static function handle_toggle_log(): void
     {
         if (!current_user_can('manage_options')) wp_die();
-        check_admin_referer('site_mcp_toggle_log');
+        check_admin_referer('mcpsm_toggle_log');
         update_option(AbilityLog::OPTION_ENABLED, AbilityLog::enabled() ? 0 : 1);
         wp_safe_redirect(admin_url('options-general.php?page=' . self::SLUG));
         exit;

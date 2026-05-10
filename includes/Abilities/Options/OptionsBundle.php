@@ -32,7 +32,7 @@ final class OptionsBundle extends AbilityBundle
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function (array $a) {
                     if (!OptionsAllowlist::contains($a['key'])) {
-                        return new \WP_Error('site_mcp_option_denied', 'Option not in allowlist', ['status' => 403, 'allowed_keys' => OptionsAllowlist::keys()]);
+                        return new \WP_Error('mcpsm_option_denied', 'Option not in allowlist', ['status' => 403, 'allowed_keys' => OptionsAllowlist::keys()]);
                     }
                     return ['key' => $a['key'], 'value' => get_option($a['key'])];
                 },
@@ -47,7 +47,7 @@ final class OptionsBundle extends AbilityBundle
                 'permission_callback' => self::require_cap('manage_options'),
                 'execute' => function (array $a) {
                     if (!OptionsAllowlist::contains($a['key'])) {
-                        return new \WP_Error('site_mcp_option_denied', 'Option not in allowlist', ['status' => 403, 'allowed_keys' => OptionsAllowlist::keys()]);
+                        return new \WP_Error('mcpsm_option_denied', 'Option not in allowlist', ['status' => 403, 'allowed_keys' => OptionsAllowlist::keys()]);
                     }
                     $ok = update_option($a['key'], $a['value']);
                     return ['key' => $a['key'], 'updated' => (bool) $ok, 'value' => get_option($a['key'])];

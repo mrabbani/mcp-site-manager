@@ -94,7 +94,7 @@ final class TaxonomyBundle extends AbilityBundle
     {
         $tax = get_taxonomy((string) $args['taxonomy']);
         if (!$tax || empty($tax->show_in_rest)) {
-            return new \WP_Error('site_mcp_tax_not_rest', sprintf('Taxonomy "%s" is not REST-enabled.', $args['taxonomy']), ['status' => 400]);
+            return new \WP_Error('mcpsm_tax_not_rest', sprintf('Taxonomy "%s" is not REST-enabled.', $args['taxonomy']), ['status' => 400]);
         }
         $base = $tax->rest_namespace ?? 'wp/v2';
         $rest_base = $tax->rest_base ?: $tax->name;

@@ -115,7 +115,7 @@ final class PluginsBundle extends AbilityBundle
     {
         $this->load_plugin_php();
         if (empty($a['slug']) && empty($a['zip_url'])) {
-            return new \WP_Error('site_mcp_plugin_input', 'Provide slug or zip_url', ['status' => 400]);
+            return new \WP_Error('mcpsm_plugin_input', 'Provide slug or zip_url', ['status' => 400]);
         }
         $source = $a['zip_url'] ?? null;
         if (!$source) {
@@ -126,7 +126,7 @@ final class PluginsBundle extends AbilityBundle
         $upgrader = new \Plugin_Upgrader(new \WP_Ajax_Upgrader_Skin());
         $r = $upgrader->install($source);
         if (is_wp_error($r) || $r === false) {
-            return is_wp_error($r) ? $r : new \WP_Error('site_mcp_plugin_install_failed', 'Install failed', ['status' => 500]);
+            return is_wp_error($r) ? $r : new \WP_Error('mcpsm_plugin_install_failed', 'Install failed', ['status' => 500]);
         }
         $installed_file = $upgrader->plugin_info();
         $out = ['plugin' => $installed_file, 'installed' => true, 'active' => false];

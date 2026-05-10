@@ -87,7 +87,7 @@ final class MediaBundle extends AbilityBundle
 
         if ($as_featured && !$parent) {
             return new \WP_Error(
-                'site_mcp_media_input',
+                'mcpsm_media_input',
                 'as_featured=true requires parent (post ID).',
                 ['status' => 400]
             );
@@ -100,7 +100,7 @@ final class MediaBundle extends AbilityBundle
         } elseif (!empty($a['base64']) && !empty($a['filename']) && !empty($a['mime_type'])) {
             $bytes = base64_decode($a['base64'], true);
             if ($bytes === false) {
-                return new \WP_Error('site_mcp_media_b64', 'Invalid base64 payload (could not decode).', ['status' => 400]);
+                return new \WP_Error('mcpsm_media_b64', 'Invalid base64 payload (could not decode).', ['status' => 400]);
             }
             $filename = $a['filename'];
             if (!preg_match('/\.[a-z0-9]+$/i', $filename)) {
@@ -115,7 +115,7 @@ final class MediaBundle extends AbilityBundle
             file_put_contents($tmp_path, $bytes);
         } else {
             return new \WP_Error(
-                'site_mcp_media_input',
+                'mcpsm_media_input',
                 'Provide either source_url, OR all three of base64, filename, and mime_type.',
                 ['status' => 400]
             );
@@ -136,7 +136,7 @@ final class MediaBundle extends AbilityBundle
             $ok = set_post_thumbnail($parent, $attachment_id);
             if (!$ok) {
                 return new \WP_Error(
-                    'site_mcp_media_thumb',
+                    'mcpsm_media_thumb',
                     sprintf('Uploaded as attachment %d, but failed to set as featured image on post %d. Post type may not support thumbnails.', $attachment_id, $parent),
                     ['status' => 500, 'attachment_id' => $attachment_id]
                 );

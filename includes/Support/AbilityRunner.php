@@ -21,15 +21,15 @@ final class AbilityRunner
             if ($result instanceof \WP_Error) {
                 $env = ErrorMapper::toMcp($result);
                 AbilityLog::record($ability, 'error', (string) $env['code'], self::ms($start));
-                return new \WP_Error('site_mcp_error', $env['message'], ['status' => $result->get_error_data()['status'] ?? 500] + (array) $env['data']);
+                return new \WP_Error('mcpsm_error', $env['message'], ['status' => $result->get_error_data()['status'] ?? 500] + (array) $env['data']);
             }
             AbilityLog::record($ability, 'ok', null, self::ms($start));
             return is_array($result) ? $result : ['result' => $result];
         } catch (\Throwable $e) {
             $env = ErrorMapper::toMcp($e);
             AbilityLog::record($ability, 'error', (string) $env['code'], self::ms($start));
-            error_log(sprintf('[site-mcp] %s threw %s: %s', $ability, get_class($e), $e->getMessage()));
-            return new \WP_Error('site_mcp_internal', $env['message'], ['status' => 500]);
+            error_log(sprintf('[mcpsm] %s threw %s: %s', $ability, get_class($e), $e->getMessage()));
+            return new \WP_Error('mcpsm_internal', $env['message'], ['status' => 500]);
         }
     }
 
