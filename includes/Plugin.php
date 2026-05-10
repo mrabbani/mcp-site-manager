@@ -20,7 +20,7 @@ final class Plugin
     {
         Admin\AbilityLog::install_table();
         if (!self::dependencies_met()) {
-            deactivate_plugins(plugin_basename(SITE_MCP_FILE));
+            deactivate_plugins(plugin_basename(MCPSM_FILE));
             wp_die(
                 esc_html__('Site MCP requires the MCP Adapter plugin and the Abilities API (WordPress 6.8+).', 'site-mcp'),
                 esc_html__('Plugin activation failed', 'site-mcp'),

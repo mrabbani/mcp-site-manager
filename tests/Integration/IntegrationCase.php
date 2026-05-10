@@ -38,8 +38,8 @@ abstract class IntegrationCase extends TestCase
      */
     private function raw_request(string $method, $params, ?string $session_id): array
     {
-        $url = getenv('SITE_MCP_URL');
-        $auth = base64_encode(getenv('SITE_MCP_USER') . ':' . getenv('SITE_MCP_APP_PW'));
+        $url = getenv('MCPSM_URL');
+        $auth = base64_encode(getenv('MCPSM_USER') . ':' . getenv('MCPSM_APP_PW'));
         $payload = [
             'jsonrpc' => '2.0',
             'id'      => self::$next_id++,
@@ -80,8 +80,8 @@ abstract class IntegrationCase extends TestCase
 
     private function raw_request_notification(string $method, $params): void
     {
-        $url = getenv('SITE_MCP_URL');
-        $auth = base64_encode(getenv('SITE_MCP_USER') . ':' . getenv('SITE_MCP_APP_PW'));
+        $url = getenv('MCPSM_URL');
+        $auth = base64_encode(getenv('MCPSM_USER') . ':' . getenv('MCPSM_APP_PW'));
         $payload = ['jsonrpc' => '2.0', 'method' => $method];
         if ($params !== null) $payload['params'] = $params;
 
