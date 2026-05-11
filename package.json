@@ -8,6 +8,7 @@
         "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/mcp-site-manager ./vendor/bin/phpunit --testsuite=integration"
     },
     "devDependencies": {
+        "@wordpress/dataviews": "^14.2.0",
         "@wordpress/env": "^10.0.0",
         "@wordpress/scripts": "^30.0.0"
     }
