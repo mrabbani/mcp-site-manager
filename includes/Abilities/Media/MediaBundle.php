@@ -31,7 +31,7 @@ final class MediaBundle extends AbilityBundle
             'media-upload' => [
                 'label'       => __('Upload media', 'mcp-site-manager'),
                 'description' => __(
-                    'Upload an image or file to the WordPress media library. Provide EITHER source_url (a publicly reachable HTTP/HTTPS URL the server will download) OR a base64 payload along with filename and mime_type. To attach the result to a post, set parent to the post ID. To also set it as that post\'s featured image, set as_featured=true (requires parent). Returns the created attachment object including its id, source_url, and media_details.',
+                    'Upload an image or file to the WordPress Media Library. Pass either source_url (public URL — preferred for files over ~30 KB to avoid base64 overhead) or base64 + filename + mime_type, never both. Optional: title, alt_text, caption, and parent (post ID — sets attachment parent). To set as the post\'s featured image in the same call, pass parent + as_featured=true. Returns attachment ID, source_url, and media_details (auto-generated sizes).',
                     'mcp-site-manager'
                 ),
                 'input_schema'=> S::object([
@@ -97,6 +97,15 @@ final class MediaBundle extends AbilityBundle
             $tmp_path = download_url($a['source_url']);
             if (is_wp_error($tmp_path)) return $tmp_path;
             $filename = basename(parse_url($a['source_url'], PHP_URL_PATH) ?: 'upload');
+            if (!preg_match('/\.[a-z0-9]+$/i', $filename)) {
+                $mime = function_exists('mime_content_type') ? @mime_content_type($tmp_path) : '';
+                $ext  = ($mime && function_exists('wp_get_default_extension_for_mime_type'))
+                    ? wp_get_default_extension_for_mime_type($mime)
+                    : '';
+                if ($ext) {
+                    $filename .= '.' . $ext;
+                }
+            }
         } elseif (!empty($a['base64']) && !empty($a['filename']) && !empty($a['mime_type'])) {
             $bytes = base64_decode($a['base64'], true);
             if ($bytes === false) {
