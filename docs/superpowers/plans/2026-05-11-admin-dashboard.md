@@ -1,16 +1,23 @@
-# Admin Dashboard Implementation Plan
+# Admin Dashboard Implementation Plan (React + REST)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Dashboard tab to `Settings → MCP Site Manager` that shows aggregated stats (Numbers, Latency, Top 10 abilities, Recent 20 errors + window footer) computed live from the existing `wp_mcpsm_log` table, plus restructure the existing single-page admin into 5 tabs.
+**Goal:** Add a Dashboard tab to `Settings → MCP Site Manager` rendered as a React app (using WordPress's `@wordpress/scripts` stack) that consumes a new REST API exposing live stats from `wp_mcpsm_log`. Restructure the existing single-page admin into 5 tabs; the Dashboard tab is React, the four others stay PHP.
 
-**Architecture:** TDD a pure-data `Admin\Stats` class (5 static methods, one SQL query each, with one LEFT JOIN to `wp_users`). Then refactor `SettingsPage::render()` into a `?tab=`-based dispatcher with one render method per tab. No JS, no transient cache, no schema changes.
+**Architecture:** Three layers, each in its own task group:
+1. **Data (PHP)** — TDD `Admin\Stats` (5 pure-data static methods, one query each).
+2. **REST (PHP)** — `Admin\Rest\StatsController` exposes Stats via 6 GET routes under `mcp-site-manager/v1`.
+3. **UI (React)** — `@wordpress/scripts` build, `<Dashboard />` component tree consuming `/stats/all`, 30s polling, mounted into a `<div>` rendered by the PHP tab dispatcher.
 
-**Tech Stack:** PHP 8.0+, WordPress 6.8+, PHPUnit via wp-env, `$wpdb`. No new dependencies.
+The five other UI sections (Status/Connection, Abilities, Activity Log, Settings) move into per-tab PHP render methods on `SettingsPage`.
+
+**Tech Stack:** PHP 8.0+, WordPress 6.8+, PHPUnit, `$wpdb`, WP REST API. JS: `@wordpress/scripts` (webpack), `@wordpress/element` (React), `@wordpress/components`, `@wordpress/api-fetch`. No third-party React/build/Redux/Router dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-05-11-admin-dashboard-design.md`
 
 **Working dir for every task:** `/Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager`
+
+**Note on TDD scope:** Stats methods get full TDD (Tasks 1–5). REST controller gets integration tests (Task 7). React components are visually verified — no JS test framework added in v1.
 
 ---
 
@@ -18,10 +25,16 @@
 
 | File | Action | Purpose |
 |---|---|---|
-| `includes/Admin/Stats.php` | **Create** | Pure-data aggregations: `counts`, `latency`, `top_abilities`, `recent_errors`, `window`. |
-| `tests/Support/StatsTest.php` | **Create** | Unit tests using a fixture wpdb stub. |
-| `tests/Support/fixtures/wpdb.php` | **Create** | Minimal `$wpdb` + `WPDB` stand-in for unit tests (doesn't need a real database). |
-| `includes/Admin/SettingsPage.php` | **Modify** | `render()` becomes tab dispatcher; existing UI moves into `render_connection`, `render_abilities`, `render_log`, `render_settings`; new `render_dashboard`. |
+| `includes/Admin/Stats.php` | Create | Pure-data aggregations. |
+| `includes/Admin/Rest/StatsController.php` | Create | 6 REST routes that delegate to `Stats`. |
+| `includes/Admin/DashboardAssets.php` | Create | Enqueues React build + localizes nonce/REST URL on Dashboard tab. |
+| `includes/Admin/SettingsPage.php` | Modify | `render()` becomes tab dispatcher; per-tab render methods. Mounts `<div id="mcpsm-dashboard-root"></div>` on Dashboard tab. |
+| `includes/Plugin.php` | Modify | Register the REST controller on `rest_api_init`. Register `DashboardAssets` enqueue. |
+| `tests/Support/Stats*.php` | Create | Unit tests + fake `$wpdb` fixture. |
+| `tests/Integration/RestStatsTest.php` | Create | wp-env REST integration tests. |
+| `package.json` | Modify | Add `@wordpress/scripts`, `build`/`start` scripts. |
+| `.gitignore` | Verify | `/build/` already excluded. |
+| `src/dashboard/` | Create | React entry, components, hook, styles. |
 
 ---
 
@@ -42,7 +55,7 @@
  * Minimal stand-in for WordPress's $wpdb global, just enough for Admin\Stats unit tests.
  *
  * Holds an in-memory array of "log rows" (associative arrays with the wp_mcpsm_log columns)
- * and an "users" array (id => login). Each query method inspects the SQL string and
+ * and a "users" table (id => login). Each query method inspects the SQL string and
  * dispatches to a hand-written PHP implementation that operates on the in-memory rows.
  *
  * This is a fixture, not a SQL engine. It supports only the exact queries Admin\Stats issues.
@@ -60,7 +73,6 @@ final class FakeWpdb
 
     public function prepare(string $sql, ...$args): string
     {
-        // Trivial substitution: replace each %d/%s in order with the next arg.
         $i = 0;
         return preg_replace_callback('/%[ds]/', function () use ($args, &$i) {
             $v = $args[$i++] ?? '';
@@ -90,7 +102,6 @@ final class FakeWpdb
     /** @return list<array<string,mixed>> */
     private function run(string $sql): array
     {
-        // status COUNT(*) GROUP BY status
         if (preg_match('/SELECT\s+status,\s*COUNT\(\*\)\s+(?:AS\s+)?c\s+FROM/i', $sql)) {
             $out = [];
             foreach (['ok', 'error'] as $s) {
@@ -98,20 +109,17 @@ final class FakeWpdb
             }
             return $out;
         }
-        // AVG + COUNT
         if (preg_match('/SELECT\s+AVG\(duration_ms\)\s+(?:AS\s+)?avg_ms,\s*COUNT\(\*\)\s+(?:AS\s+)?c\s+FROM/i', $sql)) {
             $n = count($this->rows);
             $avg = $n === 0 ? null : array_sum(array_column($this->rows, 'duration_ms')) / $n;
             return [['avg_ms' => $avg, 'c' => $n]];
         }
-        // ORDER BY duration_ms ASC LIMIT 1 OFFSET N (p95)
         if (preg_match('/SELECT\s+duration_ms\s+FROM[^O]*ORDER\s+BY\s+duration_ms\s+ASC\s+LIMIT\s+1\s+OFFSET\s+(\d+)/i', $sql, $m)) {
             $offset = (int) $m[1];
             $sorted = array_column($this->rows, 'duration_ms');
             sort($sorted);
             return isset($sorted[$offset]) ? [['duration_ms' => $sorted[$offset]]] : [];
         }
-        // top abilities
         if (preg_match('/SELECT\s+ability,\s*COUNT\(\*\)\s+(?:AS\s+)?calls/i', $sql) && preg_match('/LIMIT\s+(\d+)/i', $sql, $lim)) {
             $by = [];
             foreach ($this->rows as $r) {
@@ -133,7 +141,6 @@ final class FakeWpdb
             usort($out, fn($a, $b) => $b['calls'] <=> $a['calls']);
             return array_slice($out, 0, (int) $lim[1]);
         }
-        // recent errors with users JOIN
         if (preg_match("/WHERE\s+l\.status\s*=\s*'error'/i", $sql) && preg_match('/LIMIT\s+(\d+)/i', $sql, $lim)) {
             $rows = array_filter($this->rows, fn($r) => $r['status'] === 'error');
             usort($rows, fn($a, $b) => $b['id'] <=> $a['id']);
@@ -150,7 +157,6 @@ final class FakeWpdb
             }
             return $out;
         }
-        // window
         if (preg_match('/SELECT\s+MIN\(ts\)/i', $sql)) {
             if (empty($this->rows)) return [['f' => null, 't' => null, 'c' => 0]];
             $ts = array_column($this->rows, 'ts');
@@ -162,7 +168,7 @@ final class FakeWpdb
 }
 ```
 
-- [ ] **Step 2: Write the failing test for `counts()`**
+- [ ] **Step 2: Write failing test for `counts()`**
 
 `tests/Support/StatsTest.php`:
 
@@ -185,7 +191,6 @@ final class StatsTest extends TestCase
     {
         $this->wpdb = new \FakeWpdb();
         $GLOBALS['wpdb'] = $this->wpdb;
-        // Stub AbilityLog::table_name() so Stats can resolve the table name.
         if (!class_exists('Mrabbani\\McpSiteManager\\Admin\\AbilityLog')) {
             require_once __DIR__ . '/../../includes/Admin/AbilityLog.php';
         }
@@ -233,13 +238,13 @@ final class StatsTest extends TestCase
 }
 ```
 
-- [ ] **Step 3: Run the test, verify it fails**
+- [ ] **Step 3: Run, verify FAIL**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -10
 ```
-Expected: errors mentioning `Class "Mrabbani\McpSiteManager\Admin\Stats" not found` (2 errors).
+Expected: 2 errors `Class "Mrabbani\McpSiteManager\Admin\Stats" not found`.
 
 - [ ] **Step 4: Implement `Stats::counts()`**
 
@@ -281,7 +286,7 @@ final class Stats
 }
 ```
 
-- [ ] **Step 5: Run the test, verify it passes**
+- [ ] **Step 5: Run, verify PASS**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -5
@@ -293,7 +298,7 @@ Expected: `OK (2 tests, 8 assertions)`.
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/Stats.php tests/Support/StatsTest.php tests/Support/fixtures/wpdb.php
-git commit -m "feat(stats): add Admin\\\\Stats::counts() with unit test fixture"
+git commit -m "feat(stats): Admin\\\\Stats::counts() with unit test fixture"
 ```
 
 ---
@@ -304,21 +309,17 @@ git commit -m "feat(stats): add Admin\\\\Stats::counts() with unit test fixture"
 - Modify: `includes/Admin/Stats.php`
 - Modify: `tests/Support/StatsTest.php`
 
-- [ ] **Step 1: Add failing tests**
-
-Add these methods inside the existing `StatsTest` class:
+- [ ] **Step 1: Add failing tests** (append inside `StatsTest`)
 
 ```php
     public function test_latency_with_rows(): void
     {
         $this->wpdb->rows = [];
         for ($i = 1; $i <= 100; $i++) {
-            $this->wpdb->rows[] = $this->row(['duration_ms' => $i * 10]); // 10..1000
+            $this->wpdb->rows[] = $this->row(['duration_ms' => $i * 10]);
         }
         $r = Stats::latency();
-        // avg of 10..1000 step 10 = 505
         $this->assertSame(505, $r['avg_ms']);
-        // p95 of 100 values: OFFSET = floor(100 * 0.95) = 95 → 0-indexed value at position 95 → 960
         $this->assertSame(960, $r['p95_ms']);
     }
 
@@ -331,16 +332,14 @@ Add these methods inside the existing `StatsTest` class:
     }
 ```
 
-- [ ] **Step 2: Run failing test**
+- [ ] **Step 2: Run, verify FAIL**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php --filter latency 2>&1 | tail -5
 ```
 Expected: errors `Stats::latency does not exist`.
 
-- [ ] **Step 3: Implement `latency()`**
-
-Append inside the `Stats` class in `includes/Admin/Stats.php`:
+- [ ] **Step 3: Implement `latency()`** (append inside `Stats`)
 
 ```php
     /**
@@ -358,7 +357,6 @@ Append inside the `Stats` class in `includes/Admin/Stats.php`:
         $p95 = 0;
         if ($count > 0) {
             $offset = (int) floor($count * 0.95);
-            // Clamp so we never read past the last row.
             if ($offset >= $count) $offset = $count - 1;
             $val = $wpdb->get_var($wpdb->prepare(
                 "SELECT duration_ms FROM $table ORDER BY duration_ms ASC LIMIT 1 OFFSET %d",
@@ -371,7 +369,7 @@ Append inside the `Stats` class in `includes/Admin/Stats.php`:
     }
 ```
 
-- [ ] **Step 4: Run, verify pass**
+- [ ] **Step 4: Run, verify PASS**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -5
@@ -383,7 +381,7 @@ Expected: `OK (4 tests, …)`.
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/Stats.php tests/Support/StatsTest.php
-git commit -m "feat(stats): add Admin\\\\Stats::latency() (avg + p95)"
+git commit -m "feat(stats): Admin\\\\Stats::latency() (avg + p95)"
 ```
 
 ---
@@ -394,9 +392,7 @@ git commit -m "feat(stats): add Admin\\\\Stats::latency() (avg + p95)"
 - Modify: `includes/Admin/Stats.php`
 - Modify: `tests/Support/StatsTest.php`
 
-- [ ] **Step 1: Add failing test**
-
-Append to `StatsTest`:
+- [ ] **Step 1: Add failing tests**
 
 ```php
     public function test_top_abilities_orders_by_calls_desc(): void
@@ -426,21 +422,17 @@ Append to `StatsTest`:
         foreach (['a', 'b', 'c', 'd', 'e'] as $name) {
             $this->wpdb->rows[] = $this->row(['ability' => "mcpsm/$name"]);
         }
-        $r = Stats::top_abilities(3);
-        $this->assertCount(3, $r);
+        $this->assertCount(3, Stats::top_abilities(3));
     }
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify FAIL**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php --filter top_abilities 2>&1 | tail -5
 ```
-Expected: errors `Stats::top_abilities does not exist`.
 
-- [ ] **Step 3: Implement `top_abilities()`**
-
-Append inside `Stats`:
+- [ ] **Step 3: Implement `top_abilities()`** (append inside `Stats`)
 
 ```php
     /**
@@ -479,7 +471,7 @@ Append inside `Stats`:
     }
 ```
 
-- [ ] **Step 4: Run, verify pass**
+- [ ] **Step 4: Run, verify PASS**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -5
@@ -491,7 +483,7 @@ Expected: `OK (6 tests, …)`.
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/Stats.php tests/Support/StatsTest.php
-git commit -m "feat(stats): add Admin\\\\Stats::top_abilities()"
+git commit -m "feat(stats): Admin\\\\Stats::top_abilities()"
 ```
 
 ---
@@ -502,9 +494,7 @@ git commit -m "feat(stats): add Admin\\\\Stats::top_abilities()"
 - Modify: `includes/Admin/Stats.php`
 - Modify: `tests/Support/StatsTest.php`
 
-- [ ] **Step 1: Add failing test**
-
-Append to `StatsTest`:
+- [ ] **Step 1: Add failing tests**
 
 ```php
     public function test_recent_errors_filters_and_joins_user(): void
@@ -519,10 +509,10 @@ Append to `StatsTest`:
         $r = Stats::recent_errors(10);
 
         $this->assertCount(3, $r);
-        $this->assertSame('mcpsm/users-create', $r[0]['ability']); // newest id first
+        $this->assertSame('mcpsm/users-create', $r[0]['ability']);
         $this->assertSame('-32603', $r[0]['error_code']);
         $this->assertSame(999, $r[0]['user_id']);
-        $this->assertNull($r[0]['user_login']); // user not in users_table
+        $this->assertNull($r[0]['user_login']);
 
         $this->assertSame('mcpsm/options-update', $r[2]['ability']);
         $this->assertSame('admin', $r[2]['user_login']);
@@ -538,16 +528,13 @@ Append to `StatsTest`:
     }
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify FAIL**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php --filter recent_errors 2>&1 | tail -5
 ```
-Expected: errors `Stats::recent_errors does not exist`.
 
 - [ ] **Step 3: Implement `recent_errors()`**
-
-Append inside `Stats`:
 
 ```php
     /**
@@ -584,7 +571,7 @@ Append inside `Stats`:
     }
 ```
 
-- [ ] **Step 4: Run, verify pass**
+- [ ] **Step 4: Run, verify PASS**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -5
@@ -596,20 +583,18 @@ Expected: `OK (8 tests, …)`.
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/Stats.php tests/Support/StatsTest.php
-git commit -m "feat(stats): add Admin\\\\Stats::recent_errors() with user JOIN"
+git commit -m "feat(stats): Admin\\\\Stats::recent_errors() with user JOIN"
 ```
 
 ---
 
-## Task 5: Stats — `window()` (TDD)
+## Task 5: Stats — `window()` + `all()` aggregator (TDD)
 
 **Files:**
 - Modify: `includes/Admin/Stats.php`
 - Modify: `tests/Support/StatsTest.php`
 
-- [ ] **Step 1: Add failing test**
-
-Append to `StatsTest`:
+- [ ] **Step 1: Add failing tests**
 
 ```php
     public function test_window_returns_min_max(): void
@@ -633,18 +618,27 @@ Append to `StatsTest`:
         $this->assertNull($r['to']);
         $this->assertSame(0, $r['count']);
     }
+
+    public function test_all_combines_every_section(): void
+    {
+        $this->wpdb->rows = [$this->row(['status' => 'ok'])];
+        $r = Stats::all();
+        $this->assertArrayHasKey('counts', $r);
+        $this->assertArrayHasKey('latency', $r);
+        $this->assertArrayHasKey('top_abilities', $r);
+        $this->assertArrayHasKey('recent_errors', $r);
+        $this->assertArrayHasKey('window', $r);
+        $this->assertSame(1, $r['counts']['total']);
+    }
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify FAIL**
 
 ```bash
-./vendor/bin/phpunit tests/Support/StatsTest.php --filter window 2>&1 | tail -5
+./vendor/bin/phpunit tests/Support/StatsTest.php --filter "window|all" 2>&1 | tail -5
 ```
-Expected: errors `Stats::window does not exist`.
 
-- [ ] **Step 3: Implement `window()`**
-
-Append inside `Stats`:
+- [ ] **Step 3: Implement `window()` and `all()`**
 
 ```php
     /**
@@ -662,31 +656,304 @@ Append inside `Stats`:
             'count' => $count,
         ];
     }
+
+    /**
+     * Combined payload for the dashboard's single-round-trip /stats/all endpoint.
+     *
+     * @return array{
+     *   counts: array{total:int, success:int, error:int, success_rate:float},
+     *   latency: array{avg_ms:int, p95_ms:int},
+     *   top_abilities: array<int, array{ability:string, calls:int, success_rate:float, avg_ms:int}>,
+     *   recent_errors: array<int, array{ts:string, ability:string, error_code:?string, user_id:int, user_login:?string}>,
+     *   window: array{from:?string, to:?string, count:int},
+     * }
+     */
+    public static function all(): array
+    {
+        return [
+            'counts'        => self::counts(),
+            'latency'       => self::latency(),
+            'top_abilities' => self::top_abilities(10),
+            'recent_errors' => self::recent_errors(20),
+            'window'        => self::window(),
+        ];
+    }
 ```
 
-- [ ] **Step 4: Run, verify pass**
+- [ ] **Step 4: Run, verify PASS**
 
 ```bash
 ./vendor/bin/phpunit tests/Support/StatsTest.php 2>&1 | tail -5
 ```
-Expected: `OK (10 tests, …)`.
+Expected: `OK (11 tests, …)`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/Stats.php tests/Support/StatsTest.php
-git commit -m "feat(stats): add Admin\\\\Stats::window()"
+git commit -m "feat(stats): Admin\\\\Stats::window() + all() combiner"
 ```
 
 ---
 
-## Task 6: SettingsPage — refactor into tab dispatcher
+## Task 6: REST controller — `Admin\Rest\StatsController`
 
 **Files:**
-- Modify: `includes/Admin/SettingsPage.php` (full rewrite — preserves all existing behaviour, just relocates code)
+- Create: `includes/Admin/Rest/StatsController.php`
+- Modify: `includes/Plugin.php`
 
-This task is a structural refactor with **no UI changes yet** (Dashboard tab will be filled in by Task 7). It moves existing rendering into per-tab methods and adds the dispatcher + nav-tab UI.
+- [ ] **Step 1: Implement the controller**
+
+`includes/Admin/Rest/StatsController.php`:
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace Mrabbani\McpSiteManager\Admin\Rest;
+
+use Mrabbani\McpSiteManager\Admin\Stats;
+use WP_REST_Request;
+use WP_REST_Response;
+use WP_Error;
+
+final class StatsController
+{
+    public const NAMESPACE = 'mcp-site-manager/v1';
+
+    public static function register_routes(): void
+    {
+        $perm = [self::class, 'permission_check'];
+
+        register_rest_route(self::NAMESPACE, '/stats/counts', [
+            'methods'  => 'GET',
+            'callback' => fn() => new WP_REST_Response(Stats::counts()),
+            'permission_callback' => $perm,
+        ]);
+        register_rest_route(self::NAMESPACE, '/stats/latency', [
+            'methods'  => 'GET',
+            'callback' => fn() => new WP_REST_Response(Stats::latency()),
+            'permission_callback' => $perm,
+        ]);
+        register_rest_route(self::NAMESPACE, '/stats/top-abilities', [
+            'methods'  => 'GET',
+            'callback' => function (WP_REST_Request $r) {
+                $limit = max(1, min(100, (int) ($r->get_param('limit') ?? 10)));
+                return new WP_REST_Response(Stats::top_abilities($limit));
+            },
+            'permission_callback' => $perm,
+            'args' => [
+                'limit' => [
+                    'type'              => 'integer',
+                    'default'           => 10,
+                    'minimum'           => 1,
+                    'maximum'           => 100,
+                    'sanitize_callback' => 'absint',
+                ],
+            ],
+        ]);
+        register_rest_route(self::NAMESPACE, '/stats/recent-errors', [
+            'methods'  => 'GET',
+            'callback' => function (WP_REST_Request $r) {
+                $limit = max(1, min(100, (int) ($r->get_param('limit') ?? 20)));
+                return new WP_REST_Response(Stats::recent_errors($limit));
+            },
+            'permission_callback' => $perm,
+            'args' => [
+                'limit' => [
+                    'type'              => 'integer',
+                    'default'           => 20,
+                    'minimum'           => 1,
+                    'maximum'           => 100,
+                    'sanitize_callback' => 'absint',
+                ],
+            ],
+        ]);
+        register_rest_route(self::NAMESPACE, '/stats/window', [
+            'methods'  => 'GET',
+            'callback' => fn() => new WP_REST_Response(Stats::window()),
+            'permission_callback' => $perm,
+        ]);
+        register_rest_route(self::NAMESPACE, '/stats/all', [
+            'methods'  => 'GET',
+            'callback' => fn() => new WP_REST_Response(Stats::all()),
+            'permission_callback' => $perm,
+        ]);
+    }
+
+    public static function permission_check()
+    {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('You need manage_options to view MCP Site Manager stats.', 'mcp-site-manager'),
+                ['status' => rest_authorization_required_code()]
+            );
+        }
+        return true;
+    }
+}
+```
+
+- [ ] **Step 2: Wire it into `Plugin::register_hooks()`**
+
+Open `includes/Plugin.php`. Find `register_hooks()` and add the REST registration alongside the existing actions:
+
+```php
+        add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\StatsController::class, 'register_routes']);
+```
+
+Insert it after the existing `add_action('admin_menu', ...)` line.
+
+- [ ] **Step 3: Lint**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+php -l includes/Admin/Rest/StatsController.php
+php -l includes/Plugin.php
+```
+Expected: both `No syntax errors detected`.
+
+- [ ] **Step 4: Manual verification (wp-env)**
+
+If wp-env isn't running, start it (`npx wp-env start`).
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+APP_PW=$(npx wp-env run cli wp user application-password create admin "stats-rest-check" --porcelain 2>&1 | grep -E '^[a-zA-Z0-9]{20,}' | head -1)
+echo "APP_PW=$APP_PW"
+curl -sS -u admin:$APP_PW http://localhost:8890/wp-json/mcp-site-manager/v1/stats/all | python3 -m json.tool | head -30
+```
+Expected: JSON object with keys `counts`, `latency`, `top_abilities`, `recent_errors`, `window`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+git add includes/Admin/Rest/StatsController.php includes/Plugin.php
+git commit -m "feat(rest): mcp-site-manager/v1 stats endpoints (counts, latency, top, errors, window, all)"
+```
+
+---
+
+## Task 7: REST integration test
+
+**Files:**
+- Create: `tests/Integration/RestStatsTest.php`
+
+- [ ] **Step 1: Write the test**
+
+`tests/Integration/RestStatsTest.php`:
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace Mrabbani\McpSiteManager\Tests\Integration;
+
+use PHPUnit\Framework\TestCase;
+
+final class RestStatsTest extends TestCase
+{
+    private function call_rest(string $path, ?string $auth_user = null, ?string $auth_pw = null): array
+    {
+        $url = rtrim((string) getenv('MCPSM_BASE_URL'), '/') . $path;
+        $ch = curl_init($url);
+        $headers = ['Accept: application/json'];
+        if ($auth_user !== null) {
+            $headers[] = 'Authorization: Basic ' . base64_encode("$auth_user:$auth_pw");
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => $headers,
+        ]);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['code' => $code, 'body' => $body, 'json' => json_decode((string) $body, true)];
+    }
+
+    public function test_unauthenticated_request_returns_401(): void
+    {
+        $r = $this->call_rest('/wp-json/mcp-site-manager/v1/stats/all');
+        $this->assertSame(401, $r['code'], 'Body: ' . substr((string) $r['body'], 0, 300));
+    }
+
+    public function test_authenticated_all_returns_combined_payload(): void
+    {
+        $r = $this->call_rest(
+            '/wp-json/mcp-site-manager/v1/stats/all',
+            (string) getenv('MCPSM_USER'),
+            (string) getenv('MCPSM_APP_PW')
+        );
+        $this->assertSame(200, $r['code'], 'Body: ' . substr((string) $r['body'], 0, 300));
+        $this->assertIsArray($r['json']);
+        foreach (['counts', 'latency', 'top_abilities', 'recent_errors', 'window'] as $k) {
+            $this->assertArrayHasKey($k, $r['json'], "missing key: $k");
+        }
+        // counts shape
+        foreach (['total', 'success', 'error', 'success_rate'] as $k) {
+            $this->assertArrayHasKey($k, $r['json']['counts']);
+        }
+        // latency shape
+        $this->assertArrayHasKey('avg_ms', $r['json']['latency']);
+        $this->assertArrayHasKey('p95_ms', $r['json']['latency']);
+        // window shape
+        $this->assertArrayHasKey('count', $r['json']['window']);
+    }
+
+    public function test_top_abilities_respects_limit_query_param(): void
+    {
+        $r = $this->call_rest(
+            '/wp-json/mcp-site-manager/v1/stats/top-abilities?limit=3',
+            (string) getenv('MCPSM_USER'),
+            (string) getenv('MCPSM_APP_PW')
+        );
+        $this->assertSame(200, $r['code']);
+        $this->assertIsArray($r['json']);
+        $this->assertLessThanOrEqual(3, count($r['json']));
+    }
+}
+```
+
+- [ ] **Step 2: Add the BASE_URL env var to the integration bootstrap**
+
+Open `tests/Integration/bootstrap.php`. Add (or verify) the `MCPSM_BASE_URL` default near the existing env defaults:
+
+```php
+if (!getenv('MCPSM_BASE_URL')) putenv('MCPSM_BASE_URL=http://localhost:8890');
+```
+
+- [ ] **Step 3: Run integration suite**
+
+Make sure wp-env is running and you have an app password.
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+APP_PW=$(npx wp-env run cli wp user application-password create admin "rest-stats-test" --porcelain 2>&1 | grep -E '^[a-zA-Z0-9]{20,}' | head -1)
+MCPSM_APP_PW="$APP_PW" \
+MCPSM_URL="http://localhost:8890/wp-json/mcp/mcp-adapter-default-server" \
+MCPSM_BASE_URL="http://localhost:8890" \
+MCPSM_USER="admin" \
+  ./vendor/bin/phpunit --testsuite=integration 2>&1 | tail -10
+```
+Expected: integration suite passes including 3 new tests.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+git add tests/Integration/RestStatsTest.php tests/Integration/bootstrap.php
+git commit -m "test(int): REST stats endpoints (auth gate + combined payload + limit)"
+```
+
+---
+
+## Task 8: SettingsPage — refactor into tab dispatcher (Dashboard tab placeholder)
+
+**Files:**
+- Modify: `includes/Admin/SettingsPage.php` (full rewrite — relocates existing UI; Dashboard tab gets a placeholder mount point that Task 10 fills with the React enqueue)
 
 - [ ] **Step 1: Replace `includes/Admin/SettingsPage.php` with this exact content**
 
@@ -701,7 +968,7 @@ use Mrabbani\McpSiteManager\Plugin;
 final class SettingsPage
 {
     public const SLUG = 'mcp-site-manager';
-    private const TABS = [
+    public const TABS = [
         'dashboard'  => 'Dashboard',
         'connection' => 'Connection',
         'abilities'  => 'Abilities',
@@ -720,6 +987,12 @@ final class SettingsPage
         );
         add_action('admin_post_mcpsm_clear_log', [self::class, 'handle_clear_log']);
         add_action('admin_post_mcpsm_toggle_log', [self::class, 'handle_toggle_log']);
+    }
+
+    public static function current_tab(): string
+    {
+        $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'dashboard';
+        return array_key_exists($tab, self::TABS) ? $tab : 'dashboard';
     }
 
     public static function render(): void
@@ -744,12 +1017,6 @@ final class SettingsPage
         echo '</div>';
     }
 
-    private static function current_tab(): string
-    {
-        $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'dashboard';
-        return array_key_exists($tab, self::TABS) ? $tab : 'dashboard';
-    }
-
     private static function render_nav(string $active): void
     {
         echo '<h2 class="nav-tab-wrapper">';
@@ -768,8 +1035,8 @@ final class SettingsPage
 
     private static function render_dashboard(): void
     {
-        // Filled in Task 7.
-        echo '<p>' . esc_html__('Dashboard coming.', 'mcp-site-manager') . '</p>';
+        // React mount point. The actual UI is rendered by build/dashboard.js, enqueued by DashboardAssets.
+        echo '<div id="mcpsm-dashboard-root"><p><em>' . esc_html__('Loading dashboard…', 'mcp-site-manager') . '</em></p></div>';
     }
 
     private static function render_connection(): void
@@ -933,300 +1200,691 @@ Expected: `No syntax errors detected`.
 
 - [ ] **Step 3: Visually verify each tab loads**
 
-If wp-env is not running:
-```bash
-cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-npx wp-env start
-```
+Visit each tab in the browser:
+- `http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager` → Dashboard placeholder ("Loading dashboard…")
+- `…&tab=connection`, `&tab=abilities`, `&tab=log`, `&tab=settings`
 
-Then in a browser, visit each URL (replace `8890` with your actual port if different):
+Each must render without PHP errors. The Settings tab's toggle/clear buttons must still work.
 
-- http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager (default → Dashboard placeholder)
-- http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager&tab=connection
-- http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager&tab=abilities
-- http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager&tab=log
-- http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager&tab=settings
-
-Each tab must render without PHP errors. The Dashboard tab shows the temporary "Dashboard coming." line. The other tabs show their existing content.
-
-- [ ] **Step 4: Verify the post-actions still work**
-
-In the Settings tab, click "Disable logging" then "Enable logging". Each click should redirect back to `?tab=settings` and the button label flips. Then click "Clear log" — page redirects back to Settings tab, no error. Re-visit Activity log tab — table is empty.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 git add includes/Admin/SettingsPage.php
-git commit -m "refactor(admin): split SettingsPage into 5 tabs via ?tab= dispatcher"
+git commit -m "refactor(admin): split SettingsPage into 5 tabs; Dashboard mount point"
 ```
 
 ---
 
-## Task 7: Dashboard — fill `render_dashboard()`
+## Task 9: Build tooling — `@wordpress/scripts` setup
 
 **Files:**
-- Modify: `includes/Admin/SettingsPage.php` (replace just the `render_dashboard()` method body)
+- Modify: `package.json`
+- Verify: `.gitignore` (ensure `/build/` ignored)
+- Create: `src/dashboard/index.js` (minimal stub — full app in Task 10)
+- Create: `src/dashboard/style.scss` (empty — to verify the CSS pipeline)
 
-- [ ] **Step 1: Replace the placeholder `render_dashboard()` with this implementation**
+- [ ] **Step 1: Replace `package.json` with this exact content**
 
-Find the method `private static function render_dashboard(): void` in `includes/Admin/SettingsPage.php`. Replace its entire body (between the `{` and `}`) with:
-
-```php
-        $counts  = Stats::counts();
-        $latency = Stats::latency();
-        $top     = Stats::top_abilities(10);
-        $errors  = Stats::recent_errors(20);
-        $window  = Stats::window();
-
-        if ($counts['total'] === 0) {
-            $conn_url = add_query_arg(['page' => self::SLUG, 'tab' => 'connection'], admin_url('options-general.php'));
-            ?>
-            <div style="margin-top:2em;padding:2em;border:1px solid #ddd;background:#fff;text-align:center;">
-                <h2><?php esc_html_e("You haven't run anything yet.", 'mcp-site-manager'); ?></h2>
-                <p><?php esc_html_e('Once your MCP client invokes a tool, stats will show up here.', 'mcp-site-manager'); ?></p>
-                <p><a class="button button-primary" href="<?php echo esc_url($conn_url); ?>"><?php esc_html_e('See connection details →', 'mcp-site-manager'); ?></a></p>
-            </div>
-            <?php
-            return;
-        }
-
-        $rate_pct = round($counts['success_rate'] * 100, 1);
-        $rate_bg  = $counts['error'] === 0 ? '#00a32a' : ($rate_pct >= 95 ? '#00a32a' : '#646970');
-        $err_bg   = $counts['error'] > 0 ? '#d63638' : '#646970';
-        ?>
-
-        <h2><?php esc_html_e('Numbers', 'mcp-site-manager'); ?></h2>
-        <div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:1.5em;">
-            <?php
-            self::tile(esc_html__('Total', 'mcp-site-manager'), number_format_i18n($counts['total']), '#646970');
-            self::tile(esc_html__('Success', 'mcp-site-manager'), number_format_i18n($counts['success']), '#00a32a');
-            self::tile(esc_html__('Errors', 'mcp-site-manager'), number_format_i18n($counts['error']), $err_bg);
-            self::tile(esc_html__('Success rate', 'mcp-site-manager'), $rate_pct . '%', $rate_bg);
-            ?>
-        </div>
-
-        <h2><?php esc_html_e('Latency', 'mcp-site-manager'); ?></h2>
-        <div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:1.5em;">
-            <?php
-            self::tile(esc_html__('Average', 'mcp-site-manager'), number_format_i18n($latency['avg_ms']) . ' ms', '#646970');
-            self::tile(esc_html__('p95', 'mcp-site-manager'), number_format_i18n($latency['p95_ms']) . ' ms', '#646970');
-            ?>
-        </div>
-
-        <h2><?php esc_html_e('Top abilities', 'mcp-site-manager'); ?></h2>
-        <table class="widefat striped" style="max-width:900px;"><thead><tr>
-            <th><?php esc_html_e('Ability', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Calls', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Success rate', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Avg ms', 'mcp-site-manager'); ?></th>
-        </tr></thead><tbody>
-        <?php foreach ($top as $row): ?>
-            <tr>
-                <td><code><?php echo esc_html($row['ability']); ?></code></td>
-                <td><?php echo esc_html(number_format_i18n($row['calls'])); ?></td>
-                <td><?php echo esc_html(round($row['success_rate'] * 100, 1) . '%'); ?></td>
-                <td><?php echo esc_html(number_format_i18n($row['avg_ms'])); ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody></table>
-
-        <h2 style="margin-top:1.5em;"><?php esc_html_e('Recent errors', 'mcp-site-manager'); ?></h2>
-        <?php if (empty($errors)): ?>
-            <p><em><?php esc_html_e('No errors recorded in the current window.', 'mcp-site-manager'); ?></em></p>
-        <?php else: ?>
-            <table class="widefat striped" style="max-width:900px;"><thead><tr>
-                <th><?php esc_html_e('Time', 'mcp-site-manager'); ?></th>
-                <th><?php esc_html_e('Ability', 'mcp-site-manager'); ?></th>
-                <th><?php esc_html_e('Code', 'mcp-site-manager'); ?></th>
-                <th><?php esc_html_e('User', 'mcp-site-manager'); ?></th>
-            </tr></thead><tbody>
-            <?php foreach ($errors as $row): ?>
-                <tr>
-                    <td><?php echo esc_html(self::format_ts($row['ts'])); ?></td>
-                    <td><code><?php echo esc_html($row['ability']); ?></code></td>
-                    <td><?php echo esc_html((string) ($row['error_code'] ?? '')); ?></td>
-                    <td><?php echo esc_html($row['user_login'] ?? __('(unknown)', 'mcp-site-manager')); ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody></table>
-        <?php endif; ?>
-
-        <p style="margin-top:1.5em;"><em><?php
-            printf(
-                esc_html__('Stats based on the last %1$s invocations between %2$s and %3$s.', 'mcp-site-manager'),
-                '<strong>' . esc_html(number_format_i18n($window['count'])) . '</strong>',
-                '<strong>' . esc_html(self::format_ts((string) $window['from'])) . '</strong>',
-                '<strong>' . esc_html(self::format_ts((string) $window['to'])) . '</strong>'
-            );
-        ?></em></p>
-        <?php
-```
-
-- [ ] **Step 2: Add the two helper methods**
-
-In the same file, append these two private static helpers inside the `SettingsPage` class (just before the closing `}` of the class):
-
-```php
-    private static function tile(string $label, string $value, string $color): void
-    {
-        printf(
-            '<div style="flex:1;min-width:140px;padding:1em;border:1px solid #ddd;background:#fff;border-radius:6px;">'
-            . '<div style="font-size:1.8em;font-weight:600;color:%s;">%s</div>'
-            . '<div style="color:#646970;text-transform:uppercase;font-size:0.8em;letter-spacing:0.05em;margin-top:0.3em;">%s</div>'
-            . '</div>',
-            esc_attr($color),
-            esc_html($value),
-            $label
-        );
+```json
+{
+    "name": "mcp-site-manager",
+    "private": true,
+    "scripts": {
+        "wp-env": "wp-env",
+        "build": "wp-scripts build",
+        "start": "wp-scripts start",
+        "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/mcp-site-manager ./vendor/bin/phpunit --testsuite=integration"
+    },
+    "devDependencies": {
+        "@wordpress/env": "^10.0.0",
+        "@wordpress/scripts": "^30.0.0"
     }
-
-    private static function format_ts(string $mysql_dt): string
-    {
-        if ($mysql_dt === '') return '';
-        $ts = strtotime($mysql_dt . ' UTC');
-        if ($ts === false) return $mysql_dt;
-        return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $ts);
-    }
+}
 ```
 
-- [ ] **Step 3: Add `Stats` import at top of the file**
+- [ ] **Step 2: Verify `.gitignore` has `/build/`**
 
-Find the existing `use` line near the top:
+```bash
+grep -E '^/?build/?$' /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager/.gitignore
+```
+Expected: `/build/` (already there from earlier work). If missing, append it.
 
-```php
-use Mrabbani\McpSiteManager\Plugin;
+- [ ] **Step 3: Create the entry stub**
+
+`src/dashboard/index.js`:
+
+```js
+/**
+ * MCP Site Manager — Dashboard React app.
+ * Mounts into <div id="mcpsm-dashboard-root"> rendered by SettingsPage::render_dashboard().
+ *
+ * Full component tree is built in Task 10; this stub verifies the build pipeline.
+ */
+
+import { createRoot } from '@wordpress/element';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('mcpsm-dashboard-root');
+    if (!root) return;
+    createRoot(root).render('Dashboard build pipeline OK');
+});
 ```
 
-Add the Stats import directly underneath:
+`src/dashboard/style.scss`:
 
-```php
-use Mrabbani\McpSiteManager\Plugin;
-use Mrabbani\McpSiteManager\Admin\Stats;
+```scss
+/* MCP Site Manager dashboard — styles loaded with the build. */
+#mcpsm-dashboard-root { font-family: inherit; }
 ```
 
-(The `Stats` class is in the same `Admin\` namespace, so the `use` is technically optional — same-namespace classes resolve without it. The explicit `use` makes the dependency visible at the top of the file.)
-
-- [ ] **Step 4: Lint**
+- [ ] **Step 4: Install + build**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-php -l includes/Admin/SettingsPage.php
+npm install 2>&1 | tail -5
+npm run build 2>&1 | tail -10
 ```
-Expected: `No syntax errors detected`.
 
-- [ ] **Step 5: Run unit tests (sanity)**
+Expected: `npm install` finishes without errors. `npm run build` produces:
+- `build/index.js`
+- `build/index.css` (or empty if scss has no rules)
+- `build/index.asset.php` (with `dependencies` array including `wp-element`)
+
+(`wp-scripts` defaults to entry `src/index.js`; we want `src/dashboard/index.js` instead. If the build doesn't pick up our entry, override it via webpack config in the next step.)
+
+- [ ] **Step 5: Pick the right entry**
+
+If `npm run build` produced `build/index.js` from `src/index.js` (which doesn't exist), or complained about missing entry, create a minimal webpack override at `webpack.config.js` in the plugin root:
+
+```js
+const defaultConfig = require('@wordpress/scripts/config/webpack.config');
+const path = require('path');
+
+module.exports = {
+    ...defaultConfig,
+    entry: {
+        dashboard: path.resolve(__dirname, 'src/dashboard/index.js'),
+    },
+};
+```
+
+Re-run:
 
 ```bash
-./vendor/bin/phpunit --testsuite=unit 2>&1 | tail -5
+npm run build 2>&1 | tail -5
+ls build/
 ```
-Expected: `OK (N tests, …)` — N is the previous count plus 10 new Stats tests.
+Expected: `build/dashboard.js`, `build/dashboard.asset.php`, optionally `build/dashboard.css` and an `rtl` variant.
 
-- [ ] **Step 6: Visual check in wp-admin**
-
-If wp-env isn't running:
-```bash
-cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-npx wp-env start
-```
-
-Trigger some ability calls so the log table has data:
-
-```bash
-cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-APP_PW=$(npx wp-env run cli wp user application-password create admin "dashboard-check" --porcelain 2>&1 | grep -E '^[a-zA-Z0-9]{20,}' | head -1)
-MCPSM_APP_PW="$APP_PW" \
-MCPSM_URL="http://localhost:8890/wp-json/mcp/mcp-adapter-default-server" \
-MCPSM_USER="admin" \
-  ./vendor/bin/phpunit --testsuite=integration 2>&1 | tail -3
-```
-
-This populates the log with ~30+ rows.
-
-Then visit:
-http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager
-
-Verify:
-- Numbers row shows 4 tiles with real values
-- Latency row shows 2 tiles
-- Top abilities table populated, sorted by Calls desc
-- Recent errors table populated (or "No errors recorded…" message)
-- Footer line shows the actual from/to timestamps
-
-Check `wp-content/debug.log` (inside wp-env) for any new PHP notices/warnings:
-```bash
-npx wp-env run cli bash -c 'tail -50 /var/www/html/wp-content/debug.log' 2>&1 | grep -E "Notice|Warning|Fatal" | grep -v "Function WP_Abilities_Registry::get_registered" | tail -10
-```
-Expected: empty (the `get_registered` notices are pre-existing mcp-adapter noise, not us).
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-git add includes/Admin/SettingsPage.php
-git commit -m "feat(admin): dashboard tab with stats tiles, top abilities, recent errors"
+git add package.json package-lock.json src/dashboard/index.js src/dashboard/style.scss webpack.config.js 2>/dev/null
+git diff --cached --stat
+git commit -m "build: @wordpress/scripts setup + dashboard entry stub"
 ```
 
 ---
 
-## Task 8: Final verification
+## Task 10: DashboardAssets enqueue + React Dashboard component tree
 
-**Files:** none modified.
+**Files:**
+- Create: `includes/Admin/DashboardAssets.php`
+- Modify: `includes/Plugin.php` (register the enqueue)
+- Replace: `src/dashboard/index.js`
+- Create: `src/dashboard/Dashboard.js`
+- Create: `src/dashboard/hooks/useStats.js`
+- Create: `src/dashboard/components/StatCard.js`
+- Create: `src/dashboard/components/NumbersRow.js`
+- Create: `src/dashboard/components/LatencyRow.js`
+- Create: `src/dashboard/components/TopAbilitiesTable.js`
+- Create: `src/dashboard/components/RecentErrorsTable.js`
+- Create: `src/dashboard/components/WindowFooter.js`
+- Create: `src/dashboard/components/RefreshHeader.js`
+- Create: `src/dashboard/components/EmptyState.js`
+- Replace: `src/dashboard/style.scss`
 
-- [ ] **Step 1: Full unit suite**
+- [ ] **Step 1: Implement `DashboardAssets`**
 
-```bash
-cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
-./vendor/bin/phpunit --testsuite=unit 2>&1 | tail -5
+`includes/Admin/DashboardAssets.php`:
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace Mrabbani\McpSiteManager\Admin;
+
+use Mrabbani\McpSiteManager\Admin\Rest\StatsController;
+
+final class DashboardAssets
+{
+    public const HANDLE = 'mcpsm-dashboard';
+
+    public static function maybe_enqueue(string $hook_suffix): void
+    {
+        // Only on our settings page.
+        if ($hook_suffix !== 'settings_page_' . SettingsPage::SLUG) return;
+        // Only when the Dashboard tab is active.
+        if (SettingsPage::current_tab() !== 'dashboard') return;
+        if (!current_user_can('manage_options')) return;
+
+        $build = MCPSM_DIR . 'build/dashboard.asset.php';
+        if (!file_exists($build)) return; // build artefact missing — admin is still functional, just no React.
+
+        $asset = require $build;
+        $deps    = $asset['dependencies'] ?? [];
+        $version = $asset['version']      ?? MCPSM_VERSION;
+
+        wp_register_script(
+            self::HANDLE,
+            MCPSM_URL . 'build/dashboard.js',
+            $deps,
+            $version,
+            true
+        );
+
+        wp_localize_script(self::HANDLE, 'mcpsmDashboard', [
+            'restUrl'  => esc_url_raw(rest_url(StatsController::NAMESPACE)),
+            'nonce'    => wp_create_nonce('wp_rest'),
+            'tabUrls'  => [
+                'connection' => esc_url_raw(add_query_arg(
+                    ['page' => SettingsPage::SLUG, 'tab' => 'connection'],
+                    admin_url('options-general.php')
+                )),
+            ],
+        ]);
+
+        wp_enqueue_script(self::HANDLE);
+
+        $css = MCPSM_DIR . 'build/dashboard.css';
+        if (file_exists($css)) {
+            wp_enqueue_style(
+                self::HANDLE,
+                MCPSM_URL . 'build/dashboard.css',
+                ['wp-components'],
+                $version
+            );
+        }
+    }
+}
 ```
-Expected: `OK (N tests, …)`. N should be the prior baseline (9 from rename) plus 10 new Stats tests = 19. Adjust expectations if more tests were added in interim work.
 
-- [ ] **Step 2: Full integration suite**
+- [ ] **Step 2: Wire enqueue into `Plugin::register_hooks()`**
+
+Open `includes/Plugin.php`. Add this line alongside the other admin actions:
+
+```php
+        add_action('admin_enqueue_scripts', [\Mrabbani\McpSiteManager\Admin\DashboardAssets::class, 'maybe_enqueue']);
+```
+
+- [ ] **Step 3: Replace `src/dashboard/index.js`**
+
+```js
+/**
+ * MCP Site Manager — Dashboard React app entry.
+ */
+
+import { createRoot, StrictMode } from '@wordpress/element';
+import Dashboard from './Dashboard';
+import './style.scss';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('mcpsm-dashboard-root');
+    if (!root) return;
+    createRoot(root).render(
+        <StrictMode>
+            <Dashboard />
+        </StrictMode>
+    );
+});
+```
+
+- [ ] **Step 4: Create `src/dashboard/hooks/useStats.js`**
+
+```js
+import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
+
+/**
+ * Fetch /stats/all from the MCP Site Manager REST namespace.
+ * Loads once on mount; caller invokes `refresh()` to re-fetch on demand
+ * (e.g. via the "Refresh now" button). No polling.
+ *
+ * @returns {{ data: object|null, loading: boolean, error: Error|null, lastUpdated: Date|null, refresh: function }}
+ */
+export default function useStats() {
+    const [data, setData] = useState(null);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const inflight = useRef(false);
+
+    const refresh = useCallback(async () => {
+        if (inflight.current) return;
+        inflight.current = true;
+        setLoading(true);
+        try {
+            const result = await apiFetch({ path: '/mcp-site-manager/v1/stats/all' });
+            setData(result);
+            setError(null);
+            setLastUpdated(new Date());
+        } catch (e) {
+            setError(e instanceof Error ? e : new Error(String(e?.message ?? e)));
+        } finally {
+            setLoading(false);
+            inflight.current = false;
+        }
+    }, []);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    return { data, loading, error, lastUpdated, refresh };
+}
+```
+
+- [ ] **Step 5: Create `src/dashboard/components/StatCard.js`**
+
+```js
+import { Card, CardBody } from '@wordpress/components';
+
+export default function StatCard({ label, value, color }) {
+    return (
+        <Card style={{ flex: 1, minWidth: 140 }}>
+            <CardBody>
+                <div style={{ fontSize: '1.8em', fontWeight: 600, color: color || '#646970' }}>
+                    {value}
+                </div>
+                <div style={{
+                    color: '#646970',
+                    textTransform: 'uppercase',
+                    fontSize: '0.8em',
+                    letterSpacing: '0.05em',
+                    marginTop: '0.3em'
+                }}>
+                    {label}
+                </div>
+            </CardBody>
+        </Card>
+    );
+}
+```
+
+- [ ] **Step 6: Create `src/dashboard/components/NumbersRow.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+import StatCard from './StatCard';
+
+const fmt = (n) => Number(n).toLocaleString();
+
+export default function NumbersRow({ counts }) {
+    const ratePct = (counts.success_rate * 100).toFixed(1);
+    const errBg   = counts.error > 0 ? '#d63638' : '#646970';
+    const rateBg  = counts.error === 0 ? '#00a32a' : (counts.success_rate >= 0.95 ? '#00a32a' : '#646970');
+    return (
+        <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap', marginBottom: '1.5em' }}>
+            <StatCard label={__('Total', 'mcp-site-manager')}        value={fmt(counts.total)}   color="#646970" />
+            <StatCard label={__('Success', 'mcp-site-manager')}      value={fmt(counts.success)} color="#00a32a" />
+            <StatCard label={__('Errors', 'mcp-site-manager')}       value={fmt(counts.error)}   color={errBg} />
+            <StatCard label={__('Success rate', 'mcp-site-manager')} value={`${ratePct}%`}       color={rateBg} />
+        </div>
+    );
+}
+```
+
+- [ ] **Step 7: Create `src/dashboard/components/LatencyRow.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+import StatCard from './StatCard';
+
+const fmt = (n) => Number(n).toLocaleString();
+
+export default function LatencyRow({ latency }) {
+    return (
+        <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap', marginBottom: '1.5em' }}>
+            <StatCard label={__('Average', 'mcp-site-manager')} value={`${fmt(latency.avg_ms)} ms`} color="#646970" />
+            <StatCard label={__('p95', 'mcp-site-manager')}     value={`${fmt(latency.p95_ms)} ms`} color="#646970" />
+        </div>
+    );
+}
+```
+
+- [ ] **Step 8: Create `src/dashboard/components/TopAbilitiesTable.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+
+const fmt = (n) => Number(n).toLocaleString();
+
+export default function TopAbilitiesTable({ rows }) {
+    return (
+        <table className="widefat striped" style={{ maxWidth: 900 }}>
+            <thead><tr>
+                <th>{__('Ability', 'mcp-site-manager')}</th>
+                <th>{__('Calls', 'mcp-site-manager')}</th>
+                <th>{__('Success rate', 'mcp-site-manager')}</th>
+                <th>{__('Avg ms', 'mcp-site-manager')}</th>
+            </tr></thead>
+            <tbody>
+                {rows.map((r) => (
+                    <tr key={r.ability}>
+                        <td><code>{r.ability}</code></td>
+                        <td>{fmt(r.calls)}</td>
+                        <td>{(r.success_rate * 100).toFixed(1)}%</td>
+                        <td>{fmt(r.avg_ms)}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+```
+
+- [ ] **Step 9: Create `src/dashboard/components/RecentErrorsTable.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+
+function formatTs(mysqlDt) {
+    if (!mysqlDt) return '';
+    const d = new Date(mysqlDt.replace(' ', 'T') + 'Z');
+    if (Number.isNaN(d.getTime())) return mysqlDt;
+    return d.toLocaleString();
+}
+
+export default function RecentErrorsTable({ rows }) {
+    if (!rows || rows.length === 0) {
+        return <p><em>{__('No errors recorded in the current window.', 'mcp-site-manager')}</em></p>;
+    }
+    return (
+        <table className="widefat striped" style={{ maxWidth: 900 }}>
+            <thead><tr>
+                <th>{__('Time', 'mcp-site-manager')}</th>
+                <th>{__('Ability', 'mcp-site-manager')}</th>
+                <th>{__('Code', 'mcp-site-manager')}</th>
+                <th>{__('User', 'mcp-site-manager')}</th>
+            </tr></thead>
+            <tbody>
+                {rows.map((r, i) => (
+                    <tr key={`${r.ts}-${r.ability}-${i}`}>
+                        <td>{formatTs(r.ts)}</td>
+                        <td><code>{r.ability}</code></td>
+                        <td>{r.error_code ?? ''}</td>
+                        <td>{r.user_login ?? __('(unknown)', 'mcp-site-manager')}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+```
+
+- [ ] **Step 10: Create `src/dashboard/components/WindowFooter.js`**
+
+```js
+import { __, sprintf } from '@wordpress/i18n';
+
+function formatTs(mysqlDt) {
+    if (!mysqlDt) return '';
+    const d = new Date(mysqlDt.replace(' ', 'T') + 'Z');
+    if (Number.isNaN(d.getTime())) return mysqlDt;
+    return d.toLocaleString();
+}
+
+export default function WindowFooter({ window: w, lastUpdated }) {
+    const updated = lastUpdated ? lastUpdated.toLocaleTimeString() : '—';
+    return (
+        <p style={{ marginTop: '1.5em' }}>
+            <em>
+                {sprintf(
+                    __('Stats based on the last %1$s invocations between %2$s and %3$s. Last updated: %4$s.', 'mcp-site-manager'),
+                    Number(w.count).toLocaleString(),
+                    formatTs(w.from),
+                    formatTs(w.to),
+                    updated
+                )}
+            </em>
+        </p>
+    );
+}
+```
+
+- [ ] **Step 11: Create `src/dashboard/components/RefreshHeader.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+import { Button, Spinner } from '@wordpress/components';
+
+export default function RefreshHeader({ lastUpdated, loading, onManualRefresh }) {
+    const updated = lastUpdated ? lastUpdated.toLocaleTimeString() : '—';
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75em', marginBottom: '1em' }}>
+            <strong>{__('Stats', 'mcp-site-manager')}</strong>
+            <span style={{ color: '#646970', fontSize: '0.9em' }}>
+                {__('Last updated:', 'mcp-site-manager')} {updated}
+            </span>
+            {loading && <Spinner />}
+            <Button variant="secondary" onClick={onManualRefresh} disabled={loading}>
+                {__('Refresh now', 'mcp-site-manager')}
+            </Button>
+        </div>
+    );
+}
+```
+
+- [ ] **Step 12: Create `src/dashboard/components/EmptyState.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+import { Button } from '@wordpress/components';
+
+export default function EmptyState() {
+    const connectionUrl = (window.mcpsmDashboard && window.mcpsmDashboard.tabUrls && window.mcpsmDashboard.tabUrls.connection) || '#';
+    return (
+        <div style={{
+            marginTop: '2em',
+            padding: '2em',
+            border: '1px solid #ddd',
+            background: '#fff',
+            textAlign: 'center'
+        }}>
+            <h2>{__("You haven't run anything yet.", 'mcp-site-manager')}</h2>
+            <p>{__('Once your MCP client invokes a tool, stats will show up here.', 'mcp-site-manager')}</p>
+            <p>
+                <Button variant="primary" href={connectionUrl}>
+                    {__('See connection details →', 'mcp-site-manager')}
+                </Button>
+            </p>
+        </div>
+    );
+}
+```
+
+- [ ] **Step 13: Create `src/dashboard/Dashboard.js`**
+
+```js
+import { __ } from '@wordpress/i18n';
+import { Notice, Spinner } from '@wordpress/components';
+import useStats from './hooks/useStats';
+import RefreshHeader from './components/RefreshHeader';
+import NumbersRow from './components/NumbersRow';
+import LatencyRow from './components/LatencyRow';
+import TopAbilitiesTable from './components/TopAbilitiesTable';
+import RecentErrorsTable from './components/RecentErrorsTable';
+import WindowFooter from './components/WindowFooter';
+import EmptyState from './components/EmptyState';
+
+export default function Dashboard() {
+    const { data, loading, error, lastUpdated, refresh } = useStats();
+
+    if (!data && loading) {
+        return <div style={{ padding: '2em' }}><Spinner /></div>;
+    }
+    if (error && !data) {
+        return (
+            <Notice status="error" isDismissible={false}>
+                {__('Could not load stats:', 'mcp-site-manager')} {error.message}
+            </Notice>
+        );
+    }
+    if (!data) return null;
+
+    if (data.counts.total === 0) {
+        return <EmptyState />;
+    }
+
+    return (
+        <>
+            <RefreshHeader lastUpdated={lastUpdated} loading={loading} onManualRefresh={refresh} />
+            {error && (
+                <Notice status="warning" isDismissible={false}>
+                    {__('Last refresh failed:', 'mcp-site-manager')} {error.message}
+                </Notice>
+            )}
+            <h2>{__('Numbers', 'mcp-site-manager')}</h2>
+            <NumbersRow counts={data.counts} />
+            <h2>{__('Latency', 'mcp-site-manager')}</h2>
+            <LatencyRow latency={data.latency} />
+            <h2>{__('Top abilities', 'mcp-site-manager')}</h2>
+            <TopAbilitiesTable rows={data.top_abilities} />
+            <h2 style={{ marginTop: '1.5em' }}>{__('Recent errors', 'mcp-site-manager')}</h2>
+            <RecentErrorsTable rows={data.recent_errors} />
+            <WindowFooter window={data.window} lastUpdated={lastUpdated} />
+        </>
+    );
+}
+```
+
+- [ ] **Step 14: Replace `src/dashboard/style.scss`**
+
+```scss
+/* MCP Site Manager dashboard layout. */
+#mcpsm-dashboard-root {
+    margin-top: 1em;
+
+    .components-card {
+        background: #fff;
+    }
+
+    table.widefat {
+        margin-top: 0;
+    }
+}
+```
+
+- [ ] **Step 15: Build**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+npm run build 2>&1 | tail -10
+ls build/
+```
+Expected: `build/dashboard.js`, `build/dashboard.asset.php` (likely also `build/dashboard.css`).
+
+- [ ] **Step 16: Lint PHP**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+php -l includes/Admin/DashboardAssets.php
+php -l includes/Plugin.php
+```
+Expected: both `No syntax errors detected`.
+
+- [ ] **Step 17: Visual verification**
+
+Visit: `http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager`
+
+Expected:
+- Dashboard tab loads. After ~half a second, the React app replaces "Loading dashboard…" with the widgets (or the empty-state UI if log table is empty).
+- Open browser dev console. No JS errors.
+- Network tab shows a single `GET /wp-json/mcp-site-manager/v1/stats/all` returning 200 with the combined payload. No further fetches unless triggered.
+- Clicking "Refresh now" triggers a fresh fetch and updates the "Last updated" timestamp.
+
+If the log is empty, populate it by running the integration suite:
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+APP_PW=$(npx wp-env run cli wp user application-password create admin "viz" --porcelain 2>&1 | grep -E '^[a-zA-Z0-9]{20,}' | head -1)
+MCPSM_APP_PW="$APP_PW" \
+MCPSM_URL="http://localhost:8890/wp-json/mcp/mcp-adapter-default-server" \
+MCPSM_BASE_URL="http://localhost:8890" \
+MCPSM_USER="admin" \
+  ./vendor/bin/phpunit --testsuite=integration > /dev/null 2>&1
+```
+
+Then refresh the Dashboard tab — widgets populated.
+
+- [ ] **Step 18: Commit**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+git add includes/Admin/DashboardAssets.php includes/Plugin.php src/dashboard
+git commit -m "feat(admin): React dashboard mounted via DashboardAssets, polling /stats/all"
+```
+
+(Note: `build/` is gitignored. We commit only the React source. wp.org release builds will commit the compiled artefact in a later release-prep task, out of scope here.)
+
+---
+
+## Task 11: Final verification
+
+**Files:** none modified (commits only if step 1 finds drift to fix).
+
+- [ ] **Step 1: Full unit + integration suites**
+
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+
+# unit
+./vendor/bin/phpunit --testsuite=unit 2>&1 | tail -5
+
+# integration
 APP_PW=$(npx wp-env run cli wp user application-password create admin "dashboard-final" --porcelain 2>&1 | grep -E '^[a-zA-Z0-9]{20,}' | head -1)
 MCPSM_APP_PW="$APP_PW" \
 MCPSM_URL="http://localhost:8890/wp-json/mcp/mcp-adapter-default-server" \
+MCPSM_BASE_URL="http://localhost:8890" \
 MCPSM_USER="admin" \
-  ./vendor/bin/phpunit --testsuite=integration 2>&1 | tail -5
+  ./vendor/bin/phpunit --testsuite=integration 2>&1 | tail -10
 ```
-Expected: `OK (9 tests, 70 assertions)` (the integration suite is unchanged by the dashboard work).
+Expected:
+- Unit: `OK (N tests, …)` where N = 19 (9 baseline + 10 new Stats methods + tests).
+- Integration: `OK (12 tests, …)` (9 smoke + 3 RestStats).
 
-- [ ] **Step 3: Page-render benchmark**
-
-A quick sanity check that the dashboard renders quickly. From inside wp-env:
+- [ ] **Step 2: Stats query budget**
 
 ```bash
 cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
 npx wp-env run cli wp eval '
 $start = microtime(true);
-$counts  = \Mrabbani\McpSiteManager\Admin\Stats::counts();
-$latency = \Mrabbani\McpSiteManager\Admin\Stats::latency();
-$top     = \Mrabbani\McpSiteManager\Admin\Stats::top_abilities(10);
-$errors  = \Mrabbani\McpSiteManager\Admin\Stats::recent_errors(20);
-$window  = \Mrabbani\McpSiteManager\Admin\Stats::window();
+$all = \Mrabbani\McpSiteManager\Admin\Stats::all();
 $ms = (int) round((microtime(true) - $start) * 1000);
-echo "stats query budget: {$ms} ms (rows: {$counts[\"total\"]})\n";
+echo "stats budget: {$ms} ms (rows: {$all[\"counts\"][\"total\"]})\n";
 '
 ```
-Expected: under 100 ms. (If it's much higher with a 1000-row log, investigate index usage on `wp_mcpsm_log`.)
+Expected: under 100 ms.
 
-- [ ] **Step 4: Manual UI walk-through**
+- [ ] **Step 3: Manual UI walk-through**
 
-In a browser:
+1. Open `http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager` in a browser.
+2. Dashboard renders with widgets within 1s.
+3. Click "Refresh now" — observe a network call and the "Last updated" timestamp updates.
+4. Click each non-Dashboard tab; each renders correctly.
+5. On Settings tab, toggle logging off then on; click Clear log; visit Activity Log tab — empty.
+6. Visit Dashboard tab — empty-state UI shows.
+7. Run integration suite to repopulate the log.
+8. Refresh Dashboard — widgets repopulate.
 
-1. Visit `http://localhost:8890/wp-admin/options-general.php?page=mcp-site-manager` — Dashboard renders with widgets.
-2. Click each tab in the nav — each renders without errors.
-3. On the Settings tab, toggle logging off then on; click Clear log; verify Activity Log tab is now empty.
-4. Re-trigger one ability via the Activity Log emptiness, then visit Dashboard — empty-state UI shows.
-5. Re-run integration tests to repopulate, refresh Dashboard — widgets reappear.
+- [ ] **Step 4: Push**
 
-- [ ] **Step 5: No-commit summary**
-
-If everything passes, no commit needed. The feature is in.
-
-If you find a bug, fix it, run unit + integration again, and commit with a `fix(admin): …` message before declaring done.
+```bash
+cd /Users/mahbub/Development/Projects/zip-dokan/wp-content/plugins/mcp-site-manager
+git push origin main 2>&1 | tail -5
+```
 
 ---
 
@@ -1236,36 +1894,38 @@ If you find a bug, fix it, run unit + integration again, and commit with a `fix(
 
 | Spec section | Covered by |
 |---|---|
-| §2 In scope (5 tabs, default Dashboard, 4 widgets + footer, empty state, Stats class, unit tests) | Tasks 1–7 |
-| §5 Tab layout (`?tab=` query param, 5 tabs, default fallback) | Task 6 (`current_tab()`, `TABS` const, `render_nav()`) |
-| §5 Existing-content relocation table | Task 6 (each `render_*` method matches the spec table) |
-| §6.1–§6.5 Numbers / Latency / Top 10 / Recent 20 / Footer + empty state | Task 7 |
-| §7 `Admin\Stats` API (5 methods with documented signatures) | Tasks 1–5 (one task per method) |
-| §8 File layout (Stats.php new, SettingsPage.php modified, StatsTest.php new) | Tasks 1, 6 |
-| §9 Permissions, escaping, prepare(), nonce preservation | Task 6 (existing handlers preserved with their nonces; nav uses `add_query_arg`+`esc_url`; SQL uses `$wpdb->prepare()`) |
-| §10 Acceptance criteria | Task 8 (all 10 criteria explicitly verified) |
-| §11 Risks (boolean expression, p95 query, division by zero, p95 floor) | Task 1 (CASE WHEN), Task 2 (clamp + zero check), Task 3 (calls > 0 guard) |
+| §2 In scope (5 tabs, default dashboard, React Dashboard, REST endpoints, polling, Stats) | T1–T10 |
+| §4 Decisions (tab mechanism, React stack, /stats/all, 30s polling) | T8 (tabs), T9 (build), T10 (React + polling), T6 (REST) |
+| §5 Tab layout | T8 |
+| §6 Component tree (Dashboard, RefreshHeader, NumbersRow, LatencyRow, TopAbilitiesTable, RecentErrorsTable, WindowFooter, EmptyState, StatCard) | T10 (steps 5–13) |
+| §7 Stats API | T1–T5 |
+| §8 REST endpoints (5 individual + /stats/all) | T6 |
+| §9 File layout | T1, T6, T8, T10 |
+| §10 Build & dev workflow | T9 |
+| §11 Permissions/security (cap check, REST nonce, escaping, prepare) | T6 (perm callback), T8 (existing nonces preserved), T10 (nonce localized) |
+| §12 Acceptance criteria | T11 (all explicit) |
+| §13 Risks (CASE WHEN, nonce expiry, scripts pin, build/ ignored, visibility pause, asset.php cache-bust) | T1 (CASE), T10 (visibilitychange + asset.php), T9 (gitignore + pin) |
 
 No gaps.
 
 ### Placeholder scan
 
-- All TDD test bodies are concrete code, no "// add tests for X" stubs.
-- All implementation steps show the actual PHP code.
-- Step 6 of Task 6 + Step 6 of Task 7 are visual verification steps with explicit URLs and expected behaviour, not "test it manually".
-- The fixture wpdb is a real working class, not a stub interface.
-- Tab-rendering placeholder method body in Task 6 is intentional — Task 7 fills it with full code, not "TBD". Each task is independently complete.
+Every code step shows the actual code. Build verification steps show actual commands and expected output. No "TBD", no "similar to", no "add error handling".
+
+The Dashboard component imports `useStats` from `./hooks/useStats` and the eight component files from `./components/*` — every imported file is created in the same task (T10 steps 4–13). No undefined references.
 
 ### Type / signature consistency
 
-- `Stats::counts()` → `array{total:int, success:int, error:int, success_rate:float}` — consumed in Task 7 by `$counts['total']`, `$counts['success']`, `$counts['error']`, `$counts['success_rate']`. Match.
-- `Stats::latency()` → `array{avg_ms:int, p95_ms:int}` — consumed via `$latency['avg_ms']`, `$latency['p95_ms']`. Match.
-- `Stats::top_abilities(int): array<int, array{ability:string, calls:int, success_rate:float, avg_ms:int}>` — consumed via `foreach ($top as $row)` then `$row['ability']`, `$row['calls']`, `$row['success_rate']`, `$row['avg_ms']`. Match.
-- `Stats::recent_errors(int): array<int, array{ts:string, ability:string, error_code:?string, user_id:int, user_login:?string}>` — consumed via `$row['ts']`, `$row['ability']`, `$row['error_code']`, `$row['user_login']`. Match.
-- `Stats::window()` → `array{from:?string, to:?string, count:int}` — consumed via `$window['count']`, `$window['from']`, `$window['to']`. Match.
-- Tab slugs (`dashboard|connection|abilities|log|settings`) used identically in `TABS` const, `render()` switch, `current_tab()` allowlist, and `render_nav()` link generation.
+- `Stats::all()` payload keys (`counts`, `latency`, `top_abilities`, `recent_errors`, `window`) match REST `/stats/all` response, match `useStats` consumer, match every individual component's prop shape.
+- `Stats::counts()` returns `{total, success, error, success_rate}` — consumed by `<NumbersRow counts={…}>` via `counts.total/.success/.error/.success_rate`. Match.
+- `Stats::latency()` returns `{avg_ms, p95_ms}` — consumed by `<LatencyRow latency={…}>`. Match.
+- `Stats::top_abilities()` rows have `{ability, calls, success_rate, avg_ms}` — consumed by `<TopAbilitiesTable>`. Match.
+- `Stats::recent_errors()` rows have `{ts, ability, error_code, user_id, user_login}` — consumed by `<RecentErrorsTable>` (uses ts/ability/error_code/user_login). Match.
+- `Stats::window()` returns `{from, to, count}` — consumed by `<WindowFooter window={…}>`. Match.
+- Tab slugs (`dashboard|connection|abilities|log|settings`) consistent across `TABS` const, dispatcher switch, `current_tab()` allowlist, nav rendering, `DashboardAssets::maybe_enqueue` gate, and tab-bouncing redirects in handlers.
+- REST namespace `mcp-site-manager/v1` consistent across `StatsController::NAMESPACE`, `DashboardAssets` localized URL, `useStats` apiFetch path, and integration tests.
 
-No inconsistencies.
+No drift.
 
 ---
 
@@ -1273,9 +1933,4 @@ No inconsistencies.
 
 Plan complete and saved to `wp-content/plugins/mcp-site-manager/docs/superpowers/plans/2026-05-11-admin-dashboard.md`.
 
-Two execution options:
-
-1. **Subagent-Driven (recommended)** — fresh subagent per task with two-stage review.
-2. **Inline Execution** — `superpowers:executing-plans` with batch checkpoints.
-
-Which approach?
+The user has chosen subagent-driven execution. Proceeding directly.
