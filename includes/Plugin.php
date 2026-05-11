@@ -49,7 +49,6 @@ final class Plugin
 
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
         add_action('wp_abilities_api_init', [$this, 'register_abilities']);
-        add_filter('mcp_adapter_default_server_config', [$this, 'extend_default_server']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\StatsController::class, 'register_routes']);
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\AbilitiesController::class, 'register_routes']);
@@ -72,33 +71,6 @@ final class Plugin
             'label'       => __('MCP Site Manager', 'mcp-site-manager'),
             'description' => __('WordPress site management abilities exposed to MCP clients.', 'mcp-site-manager'),
         ]);
-    }
-
-    /**
-     * @param mixed $config
-     */
-    public function extend_default_server($config): array
-    {
-        if (!is_array($config)) {
-            $config = [];
-        }
-        $existing = isset($config['tools']) && is_array($config['tools']) ? $config['tools'] : [];
-        $config['tools'] = array_values(array_unique(array_merge($existing, $this->ability_names())));
-        return $config;
-    }
-
-    /** @return string[] */
-    public function ability_names(): array
-    {
-        $disabled = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
-        $names = [];
-        foreach ($this->bundles() as $bundle) {
-            foreach (array_keys($bundle->abilities()) as $local) {
-                if (in_array($local, $disabled, true)) continue;
-                $names[] = "mcpsm/$local";
-            }
-        }
-        return $names;
     }
 
     public function render_missing_deps_notice(): void
