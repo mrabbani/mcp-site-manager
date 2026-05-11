@@ -82,7 +82,7 @@ final class FakeWpdb
                 $out[] = [
                     'ability' => $b['ability'],
                     'calls' => $b['calls'],
-                    'success_rate' => $b['calls'] === 0 ? 0.0 : $b['ok'] / $b['calls'],
+                    'ok' => $b['ok'],
                     'avg_ms' => $b['calls'] === 0 ? 0 : $b['sum'] / $b['calls'],
                 ];
             }
