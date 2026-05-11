@@ -118,29 +118,10 @@ final class SettingsPage
 
     private static function render_log(): void
     {
-        $log_rows = AbilityLog::recent(50);
         ?>
         <h2><?php esc_html_e('Activity log', 'mcp-site-manager'); ?></h2>
-        <p><?php esc_html_e('Last 50 ability invocations. Use the Settings tab to disable logging or clear the log.', 'mcp-site-manager'); ?></p>
-        <table class="widefat striped"><thead><tr>
-            <th><?php esc_html_e('Time', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('User', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Ability', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Status', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Code', 'mcp-site-manager'); ?></th>
-            <th><?php esc_html_e('Duration (ms)', 'mcp-site-manager'); ?></th>
-        </tr></thead><tbody>
-        <?php foreach ($log_rows as $row): ?>
-            <tr>
-                <td><?php echo esc_html($row['ts']); ?></td>
-                <td><?php echo esc_html((string) $row['user_id']); ?></td>
-                <td><code><?php echo esc_html($row['ability']); ?></code></td>
-                <td><?php echo esc_html($row['status']); ?></td>
-                <td><?php echo esc_html((string) ($row['error_code'] ?? '')); ?></td>
-                <td><?php echo esc_html((string) $row['duration_ms']); ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody></table>
+        <p><?php esc_html_e('Recent ability invocations. Use the Settings tab to disable logging or clear the log.', 'mcp-site-manager'); ?></p>
+        <div id="mcpsm-log-root"><p><em><?php esc_html_e('Loading activity log…', 'mcp-site-manager'); ?></em></p></div>
         <?php
     }
 
