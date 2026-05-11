@@ -109,4 +109,34 @@ final class StatsTest extends TestCase
         }
         $this->assertCount(3, Stats::top_abilities(3));
     }
+
+    public function test_recent_errors_filters_and_joins_user(): void
+    {
+        $this->wpdb->users_table = [1 => 'admin', 2 => 'editor'];
+        $this->wpdb->rows = [
+            $this->row(['ability' => 'mcpsm/posts-list', 'status' => 'ok']),
+            $this->row(['ability' => 'mcpsm/options-update', 'status' => 'error', 'error_code' => '-32001', 'user_id' => 1]),
+            $this->row(['ability' => 'mcpsm/posts-create', 'status' => 'error', 'error_code' => '-32602', 'user_id' => 2]),
+            $this->row(['ability' => 'mcpsm/users-create', 'status' => 'error', 'error_code' => '-32603', 'user_id' => 999]),
+        ];
+        $r = Stats::recent_errors(10);
+
+        $this->assertCount(3, $r);
+        $this->assertSame('mcpsm/users-create', $r[0]['ability']);
+        $this->assertSame('-32603', $r[0]['error_code']);
+        $this->assertSame(999, $r[0]['user_id']);
+        $this->assertNull($r[0]['user_login']);
+
+        $this->assertSame('mcpsm/options-update', $r[2]['ability']);
+        $this->assertSame('admin', $r[2]['user_login']);
+    }
+
+    public function test_recent_errors_respects_limit(): void
+    {
+        $this->wpdb->rows = [];
+        for ($i = 0; $i < 25; $i++) {
+            $this->wpdb->rows[] = $this->row(['status' => 'error', 'ability' => "mcpsm/x-$i"]);
+        }
+        $this->assertCount(5, Stats::recent_errors(5));
+    }
 }

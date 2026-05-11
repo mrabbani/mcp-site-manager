@@ -91,4 +91,37 @@ final class Stats
         }
         return $out;
     }
+
+    /**
+     * @param int $limit  Max rows returned (1-100).
+     * @return array<int, array{ts:string, ability:string, error_code:?string, user_id:int, user_login:?string}>
+     */
+    public static function recent_errors(int $limit = 20): array
+    {
+        global $wpdb;
+        $table = AbilityLog::table_name();
+        $users = $wpdb->users;
+        $limit = max(1, min(100, $limit));
+        $rows = (array) $wpdb->get_results($wpdb->prepare(
+            "SELECT l.ts, l.ability, l.error_code, l.user_id, u.user_login
+             FROM $table l
+             LEFT JOIN $users u ON u.ID = l.user_id
+             WHERE l.status = 'error'
+             ORDER BY l.id DESC
+             LIMIT %d",
+            $limit
+        ), ARRAY_A);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'ts'         => (string) ($r['ts'] ?? ''),
+                'ability'    => (string) ($r['ability'] ?? ''),
+                'error_code' => isset($r['error_code']) ? (string) $r['error_code'] : null,
+                'user_id'    => (int) ($r['user_id'] ?? 0),
+                'user_login' => isset($r['user_login']) && $r['user_login'] !== null ? (string) $r['user_login'] : null,
+            ];
+        }
+        return $out;
+    }
 }
