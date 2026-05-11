@@ -1,0 +1,17 @@
+/* MCP Site Manager — Activity Log tab styles. */
+@import '../shared/dataviews.scss';
+
+#mcpsm-log-root {
+    margin-top: 1em;
+}
+
+.mcpsm-log-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+}
+.mcpsm-log-status-badge--ok    { background: #00a32a; }
+.mcpsm-log-status-badge--error { background: #d63638; }
