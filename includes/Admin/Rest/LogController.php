@@ -1,0 +1,78 @@
+<?php
+declare(strict_types=1);
+
+namespace Mrabbani\McpSiteManager\Admin\Rest;
+
+use Mrabbani\McpSiteManager\Admin\AbilityLog;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
+
+final class LogController
+{
+    public const NAMESPACE = 'mcp-site-manager/v1';
+
+    public static function register_routes(): void
+    {
+        register_rest_route(self::NAMESPACE, '/log', [
+            'methods'             => 'GET',
+            'callback'            => [self::class, 'get_list'],
+            'permission_callback' => [self::class, 'permission_check'],
+            'args' => [
+                'page'     => ['type' => 'integer', 'default' => 1,  'minimum' => 1],
+                'per_page' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200],
+            ],
+        ]);
+    }
+
+    public static function permission_check()
+    {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error('rest_forbidden', __('You need manage_options.', 'mcp-site-manager'), ['status' => rest_authorization_required_code()]);
+        }
+        return true;
+    }
+
+    public static function get_list(WP_REST_Request $r): WP_REST_Response
+    {
+        global $wpdb;
+        $page     = max(1, (int) $r->get_param('page'));
+        $per_page = max(1, min(200, (int) $r->get_param('per_page')));
+        $offset   = ($page - 1) * $per_page;
+
+        $log_table   = AbilityLog::table_name();
+        $users_table = $wpdb->users;
+
+        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM $log_table");
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT l.id, l.ts, l.user_id, u.user_login, l.ability, l.status, l.error_code, l.duration_ms
+             FROM $log_table l
+             LEFT JOIN $users_table u ON u.ID = l.user_id
+             ORDER BY l.id DESC
+             LIMIT %d OFFSET %d",
+            $per_page,
+            $offset
+        ), ARRAY_A);
+
+        $items = array_map(static function ($row) {
+            return [
+                'id'          => (int) $row['id'],
+                'ts'          => (string) $row['ts'],
+                'user_id'     => (int) $row['user_id'],
+                'user_login'  => $row['user_login'] !== null ? (string) $row['user_login'] : '',
+                'ability'     => (string) $row['ability'],
+                'status'      => (string) $row['status'],
+                'error_code'  => $row['error_code'] !== null ? (string) $row['error_code'] : '',
+                'duration_ms' => (int) $row['duration_ms'],
+            ];
+        }, $rows ?: []);
+
+        return new WP_REST_Response([
+            'items'    => $items,
+            'total'    => $total,
+            'page'     => $page,
+            'per_page' => $per_page,
+        ]);
+    }
+}
