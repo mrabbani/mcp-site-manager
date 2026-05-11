@@ -110,12 +110,29 @@ final class Plugin
         ];
     }
 
+    /**
+     * Public accessor for the bundle list. Used by the Abilities admin tab to
+     * enumerate every potential ability (including disabled ones) so the
+     * "save" handler can compute the disabled set.
+     *
+     * @return Abilities\AbilityBundle[]
+     */
+    public static function instance_bundles(): array
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance->bundles();
+    }
+
     /** @return string[] */
     public function ability_names(): array
     {
+        $disabled = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
         $names = [];
         foreach ($this->bundles() as $bundle) {
             foreach (array_keys($bundle->abilities()) as $local) {
+                if (in_array($local, $disabled, true)) continue;
                 $names[] = "mcpsm/$local";
             }
         }
