@@ -20,7 +20,23 @@ final class LogController
             'permission_callback' => [self::class, 'permission_check'],
             'args' => [
                 'page'     => ['type' => 'integer', 'default' => 1,  'minimum' => 1],
-                'per_page' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200],
+                'per_page' => ['type' => 'integer', 'default' => 25, 'minimum' => 1, 'maximum' => 200],
+                'orderby'  => [
+                    'type'    => 'string',
+                    'default' => 'ts',
+                    'enum'    => ['id', 'ts', 'ability', 'status', 'error_code', 'duration_ms', 'user_login'],
+                ],
+                'order'    => [
+                    'type'    => 'string',
+                    'default' => 'desc',
+                    'enum'    => ['asc', 'desc', 'ASC', 'DESC'],
+                ],
+                'search'   => ['type' => 'string', 'default' => ''],
+                'status'   => [
+                    'type'    => 'string',
+                    'default' => '',
+                    'enum'    => ['', 'ok', 'error'],
+                ],
             ],
         ]);
 
@@ -53,20 +69,58 @@ final class LogController
         $per_page = max(1, min(200, (int) $r->get_param('per_page')));
         $offset   = ($page - 1) * $per_page;
 
+        $orderby_param = (string) $r->get_param('orderby');
+        $order         = strtoupper((string) $r->get_param('order')) === 'ASC' ? 'ASC' : 'DESC';
+        $search        = trim((string) $r->get_param('search'));
+        $status        = (string) $r->get_param('status');
+
+        // Whitelist orderby → real SQL expression (table-qualified).
+        $orderby_map = [
+            'id'          => 'l.id',
+            'ts'          => 'l.ts',
+            'ability'     => 'l.ability',
+            'status'      => 'l.status',
+            'error_code'  => 'l.error_code',
+            'duration_ms' => 'l.duration_ms',
+            'user_login'  => 'u.user_login',
+        ];
+        $orderby_sql = $orderby_map[$orderby_param] ?? 'l.ts';
+
         $log_table   = AbilityLog::table_name();
         $users_table = $wpdb->users;
 
-        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM $log_table");
+        $where  = '1=1';
+        $params = [];
 
-        $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT l.id, l.ts, l.user_id, u.user_login, l.ability, l.status, l.error_code, l.duration_ms
+        if ($status === 'ok' || $status === 'error') {
+            $where   .= ' AND l.status = %s';
+            $params[] = $status;
+        }
+
+        if ($search !== '') {
+            $like     = '%' . $wpdb->esc_like($search) . '%';
+            $where   .= ' AND (l.ability LIKE %s OR l.error_code LIKE %s OR u.user_login LIKE %s)';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $count_sql = "SELECT COUNT(*) FROM $log_table l LEFT JOIN $users_table u ON u.ID = l.user_id WHERE $where";
+        $total = empty($params)
+            ? (int) $wpdb->get_var($count_sql)
+            : (int) $wpdb->get_var($wpdb->prepare($count_sql, ...$params));
+
+        $list_sql = "SELECT l.id, l.ts, l.user_id, u.user_login, l.ability, l.status, l.error_code, l.duration_ms
              FROM $log_table l
              LEFT JOIN $users_table u ON u.ID = l.user_id
-             ORDER BY l.id DESC
-             LIMIT %d OFFSET %d",
-            $per_page,
-            $offset
-        ), ARRAY_A);
+             WHERE $where
+             ORDER BY $orderby_sql $order, l.id DESC
+             LIMIT %d OFFSET %d";
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare($list_sql, ...array_merge($params, [$per_page, $offset])),
+            ARRAY_A
+        );
 
         $items = array_map(static function ($row) {
             return [
