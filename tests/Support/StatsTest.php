@@ -79,4 +79,34 @@ final class StatsTest extends TestCase
         $this->assertSame(0, $r['avg_ms']);
         $this->assertSame(0, $r['p95_ms']);
     }
+
+    public function test_top_abilities_orders_by_calls_desc(): void
+    {
+        $this->wpdb->rows = [];
+        for ($i = 0; $i < 5; $i++) $this->wpdb->rows[] = $this->row(['ability' => 'mcpsm/themes-active', 'duration_ms' => 100, 'status' => 'ok']);
+        for ($i = 0; $i < 3; $i++) $this->wpdb->rows[] = $this->row(['ability' => 'mcpsm/posts-list',   'duration_ms' => 50,  'status' => 'ok']);
+        $this->wpdb->rows[] = $this->row(['ability' => 'mcpsm/posts-list', 'duration_ms' => 50, 'status' => 'error']);
+        for ($i = 0; $i < 2; $i++) $this->wpdb->rows[] = $this->row(['ability' => 'mcpsm/health-overview', 'duration_ms' => 10, 'status' => 'ok']);
+
+        $r = Stats::top_abilities(10);
+
+        $this->assertCount(3, $r);
+        $this->assertSame('mcpsm/themes-active', $r[0]['ability']);
+        $this->assertSame(5, $r[0]['calls']);
+        $this->assertSame(1.0, $r[0]['success_rate']);
+        $this->assertSame(100, $r[0]['avg_ms']);
+
+        $this->assertSame('mcpsm/posts-list', $r[1]['ability']);
+        $this->assertSame(4, $r[1]['calls']);
+        $this->assertSame(0.75, $r[1]['success_rate']);
+    }
+
+    public function test_top_abilities_respects_limit(): void
+    {
+        $this->wpdb->rows = [];
+        foreach (['a', 'b', 'c', 'd', 'e'] as $name) {
+            $this->wpdb->rows[] = $this->row(['ability' => "mcpsm/$name"]);
+        }
+        $this->assertCount(3, Stats::top_abilities(3));
+    }
 }

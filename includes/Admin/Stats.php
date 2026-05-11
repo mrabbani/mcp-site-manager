@@ -56,4 +56,39 @@ final class Stats
 
         return ['avg_ms' => $avg, 'p95_ms' => $p95];
     }
+
+    /**
+     * @param int $limit  Max rows returned (1-100).
+     * @return array<int, array{ability:string, calls:int, success_rate:float, avg_ms:int}>
+     */
+    public static function top_abilities(int $limit = 10): array
+    {
+        global $wpdb;
+        $table = AbilityLog::table_name();
+        $limit = max(1, min(100, $limit));
+        $rows = (array) $wpdb->get_results($wpdb->prepare(
+            "SELECT ability,
+                    COUNT(*) AS calls,
+                    SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END) AS ok,
+                    AVG(duration_ms) AS avg_ms
+             FROM $table
+             GROUP BY ability
+             ORDER BY calls DESC
+             LIMIT %d",
+            $limit
+        ), ARRAY_A);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $calls = (int) ($r['calls'] ?? 0);
+            $ok    = (int) ($r['ok'] ?? 0);
+            $out[] = [
+                'ability'      => (string) ($r['ability'] ?? ''),
+                'calls'        => $calls,
+                'success_rate' => $calls > 0 ? (float) ($ok / $calls) : 0.0,
+                'avg_ms'       => isset($r['avg_ms']) && $r['avg_ms'] !== null ? (int) round((float) $r['avg_ms']) : 0,
+            ];
+        }
+        return $out;
+    }
 }
