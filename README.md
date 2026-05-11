@@ -79,9 +79,8 @@ mcp-site-manager/
 
 1. **Bootstrap.** On `plugins_loaded` priority 5, `Plugin::boot()` checks for the MCP Adapter dependency and wires hooks.
 2. **Category registration.** On `wp_abilities_api_categories_init`, registers the `mcpsm` category.
-3. **Ability registration.** On `wp_abilities_api_init`, each `AbilityBundle` registers its abilities via `wp_register_ability('mcpsm/<verb>', […])`.
-4. **MCP exposure.** Via the `mcp_adapter_default_server_config` filter, every `mcpsm/*` ability name is added to the MCP Adapter's default server tool list. Clients see them as `mcpsm-<verb>` (slashes are mcp-adapter-rewritten to hyphens).
-5. **Execution.** When a client calls `tools/call`, `AbilityBundle::register()` wraps the execute callback in `AbilityRunner::run()`, which centralizes try/catch, logging to the activity log table, and mapping `WP_Error`/`Throwable` to JSON-RPC error envelopes.
+3. **Ability registration.** On `wp_abilities_api_init`, each `AbilityBundle` registers its abilities via `wp_register_ability('mcpsm/<verb>', […])`. MCP Adapter's default server discovers registered abilities on its own — no filter wiring required. Clients see them as `mcpsm-<verb>` (slashes are mcp-adapter-rewritten to hyphens).
+4. **Execution.** When a client calls `tools/call`, `AbilityBundle::register()` wraps the execute callback in `AbilityRunner::run()`, which centralizes try/catch, logging to the activity log table, and mapping `WP_Error`/`Throwable` to JSON-RPC error envelopes.
 
 ### Two ability patterns
 
