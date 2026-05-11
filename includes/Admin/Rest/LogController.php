@@ -23,6 +23,19 @@ final class LogController
                 'per_page' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200],
             ],
         ]);
+
+        register_rest_route(self::NAMESPACE, '/log/bulk-delete', [
+            'methods'             => 'POST',
+            'callback'            => [self::class, 'bulk_delete'],
+            'permission_callback' => [self::class, 'permission_check'],
+            'args' => [
+                'ids' => [
+                    'type'     => 'array',
+                    'required' => true,
+                    'items'    => ['type' => 'integer'],
+                ],
+            ],
+        ]);
     }
 
     public static function permission_check()
@@ -74,5 +87,23 @@ final class LogController
             'page'     => $page,
             'per_page' => $per_page,
         ]);
+    }
+
+    public static function bulk_delete(WP_REST_Request $r): WP_REST_Response
+    {
+        global $wpdb;
+        $ids = array_values(array_filter(array_map('intval', (array) $r->get_param('ids')), static fn($i) => $i > 0));
+        if (empty($ids)) {
+            return new WP_REST_Response(['deleted' => 0]);
+        }
+
+        $table       = AbilityLog::table_name();
+        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+        $deleted = (int) $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table WHERE id IN ($placeholders)",
+            ...$ids
+        ));
+
+        return new WP_REST_Response(['deleted' => $deleted]);
     }
 }

@@ -96,6 +96,33 @@ export default function Log() {
         },
     ], [] );
 
+    const bulkDelete = useCallback( ( selected ) => {
+        const ids = selected.map( ( i ) => i.id );
+        if ( ids.length === 0 ) return Promise.resolve();
+        if ( ! window.confirm(
+            __( 'Delete the selected log entries? This cannot be undone.', 'mcp-site-manager' )
+        ) ) {
+            return Promise.resolve();
+        }
+        return apiFetch( {
+            path: '/mcp-site-manager/v1/log/bulk-delete',
+            method: 'POST',
+            data: { ids },
+        } )
+            .then( () => load() )
+            .catch( ( e ) => setError( e.message || String( e ) ) );
+    }, [ load ] );
+
+    const actions = useMemo( () => [
+        {
+            id: 'bulk-delete',
+            label: __( 'Delete', 'mcp-site-manager' ),
+            supportsBulk: true,
+            isDestructive: true,
+            callback: bulkDelete,
+        },
+    ], [ bulkDelete ] );
+
     const { data, paginationInfo } = useMemo(
         () =>
             items
@@ -135,6 +162,7 @@ export default function Log() {
             <DataViews
                 data={ data }
                 fields={ fields }
+                actions={ actions }
                 view={ view }
                 onChangeView={ setView }
                 paginationInfo={ paginationInfo }
