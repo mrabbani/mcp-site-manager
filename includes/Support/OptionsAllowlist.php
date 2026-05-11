@@ -26,12 +26,21 @@ final class OptionsAllowlist
 
     public static function contains(string $key): bool
     {
+        // Hard denylist: plugin-internal options (mcpsm_*) must never be writable via MCP,
+        // regardless of what ALLOWED contains. Otherwise an MCP client with manage_options
+        // could re-enable abilities the admin disabled, or flip logging off, etc.
+        if (str_starts_with($key, 'mcpsm_')) {
+            return false;
+        }
         return in_array($key, self::ALLOWED, true);
     }
 
     /** @return string[] */
     public static function keys(): array
     {
-        return self::ALLOWED;
+        return array_values(array_filter(
+            self::ALLOWED,
+            static fn(string $k): bool => !str_starts_with($k, 'mcpsm_')
+        ));
     }
 }
