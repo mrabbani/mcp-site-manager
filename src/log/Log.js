@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from '@wordpress/element';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
-import { Button, Notice, Spinner } from '@wordpress/components';
+import { Button, Notice, Spinner, __experimentalHStack as HStack, __experimentalVStack as VStack } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf, _n } from '@wordpress/i18n';
 
 const PER_PAGE = 200;
 
@@ -96,14 +96,8 @@ export default function Log() {
         },
     ], [] );
 
-    const bulkDelete = useCallback( ( selected ) => {
-        const ids = selected.map( ( i ) => i.id );
-        if ( ids.length === 0 ) return Promise.resolve();
-        if ( ! window.confirm(
-            __( 'Delete the selected log entries? This cannot be undone.', 'mcp-site-manager' )
-        ) ) {
-            return Promise.resolve();
-        }
+    const performDelete = useCallback( ( ids ) => {
+        if ( ! ids.length ) return Promise.resolve();
         return apiFetch( {
             path: '/mcp-site-manager/v1/log/bulk-delete',
             method: 'POST',
@@ -119,9 +113,46 @@ export default function Log() {
             label: __( 'Delete', 'mcp-site-manager' ),
             supportsBulk: true,
             isDestructive: true,
-            callback: bulkDelete,
+            hideModalHeader: false,
+            modalHeader: __( 'Delete log entries', 'mcp-site-manager' ),
+            RenderModal: ( { items: selected, closeModal, onActionPerformed } ) => {
+                const ids = selected.map( ( i ) => i.id );
+                const [ busy, setBusy ] = useState( false );
+                const onConfirm = () => {
+                    setBusy( true );
+                    performDelete( ids ).finally( () => {
+                        setBusy( false );
+                        if ( onActionPerformed ) onActionPerformed( selected );
+                        closeModal();
+                    } );
+                };
+                return (
+                    <VStack spacing={ 5 }>
+                        <p>
+                            { sprintf(
+                                /* translators: %d: number of log entries */
+                                _n(
+                                    'Delete %d log entry? This cannot be undone.',
+                                    'Delete %d log entries? This cannot be undone.',
+                                    ids.length,
+                                    'mcp-site-manager'
+                                ),
+                                ids.length
+                            ) }
+                        </p>
+                        <HStack justify="flex-end">
+                            <Button variant="tertiary" onClick={ closeModal } disabled={ busy }>
+                                { __( 'Cancel', 'mcp-site-manager' ) }
+                            </Button>
+                            <Button variant="primary" isDestructive onClick={ onConfirm } isBusy={ busy } disabled={ busy }>
+                                { __( 'Delete', 'mcp-site-manager' ) }
+                            </Button>
+                        </HStack>
+                    </VStack>
+                );
+            },
         },
-    ], [ bulkDelete ] );
+    ], [ performDelete ] );
 
     const { data, paginationInfo } = useMemo(
         () =>
