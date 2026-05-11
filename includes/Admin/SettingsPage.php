@@ -27,7 +27,6 @@ final class SettingsPage
         );
         add_action('admin_post_mcpsm_clear_log', [self::class, 'handle_clear_log']);
         add_action('admin_post_mcpsm_toggle_log', [self::class, 'handle_toggle_log']);
-        add_action('admin_post_mcpsm_save_abilities', [self::class, 'handle_save_abilities']);
     }
 
     public static function current_tab(): string
@@ -110,103 +109,10 @@ final class SettingsPage
 
     private static function render_abilities(): void
     {
-        $disabled  = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
-        $bundles   = \Mrabbani\McpSiteManager\Plugin::instance_bundles();
-        $abilities = self::collect_abilities(); // existing — name => description for currently registered
-
-        // Build full inventory: local name => [label, description, bundle_label].
-        $rows = [];
-        foreach ($bundles as $bundle) {
-            $bundle_label = self::bundle_label($bundle);
-            foreach ($bundle->abilities() as $local => $spec) {
-                $rows[$local] = [
-                    'name'        => "mcpsm/$local",
-                    'tool_name'   => 'mcpsm-' . $local,
-                    'label'       => isset($spec['label']) ? (string) $spec['label'] : $local,
-                    'description' => isset($spec['description']) ? (string) $spec['description'] : '',
-                    'bundle'      => $bundle_label,
-                    'enabled'     => !in_array($local, $disabled, true),
-                ];
-            }
-        }
-        ksort($rows);
-        $total = count($rows);
         ?>
         <h2><?php esc_html_e('Registered abilities', 'mcp-site-manager'); ?></h2>
         <p><?php esc_html_e('Disable individual abilities to hide them from MCP clients. Disabled abilities are not registered with WordPress and cannot be invoked. Changes take effect on the next page load and on the next MCP client reconnect.', 'mcp-site-manager'); ?></p>
-
-        <?php if (!empty($_GET['updated'])): ?>
-            <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Abilities saved.', 'mcp-site-manager'); ?></p></div>
-        <?php endif; ?>
-
-        <p>
-            <input type="search" id="mcpsm-ability-filter"
-                   placeholder="<?php esc_attr_e('Search abilities…', 'mcp-site-manager'); ?>"
-                   style="width:300px;">
-            <span id="mcpsm-ability-count" style="margin-left:1em;color:#646970;"></span>
-        </p>
-
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <?php wp_nonce_field('mcpsm_save_abilities'); ?>
-            <input type="hidden" name="action" value="mcpsm_save_abilities">
-
-            <table class="widefat striped">
-                <thead><tr>
-                    <th style="width:60px;"><?php esc_html_e('Enabled', 'mcp-site-manager'); ?></th>
-                    <th><?php esc_html_e('Name', 'mcp-site-manager'); ?></th>
-                    <th><?php esc_html_e('Description', 'mcp-site-manager'); ?></th>
-                    <th style="width:140px;"><?php esc_html_e('Bundle', 'mcp-site-manager'); ?></th>
-                    <th style="width:200px;"><?php esc_html_e('Tool name', 'mcp-site-manager'); ?></th>
-                </tr></thead>
-                <tbody>
-                <?php foreach ($rows as $local => $r):
-                    $haystack = strtolower($r['name'] . ' ' . $r['label'] . ' ' . $r['description'] . ' ' . $r['bundle']);
-                ?>
-                    <tr class="mcpsm-ability-row" data-haystack="<?php echo esc_attr($haystack); ?>">
-                        <td>
-                            <input type="checkbox"
-                                   name="enabled[]"
-                                   value="<?php echo esc_attr($local); ?>"
-                                   <?php checked($r['enabled']); ?>>
-                        </td>
-                        <td><code><?php echo esc_html($r['name']); ?></code><br><small><?php echo esc_html($r['label']); ?></small></td>
-                        <td><?php echo esc_html($r['description']); ?></td>
-                        <td><?php echo esc_html($r['bundle']); ?></td>
-                        <td><code><?php echo esc_html($r['tool_name']); ?></code></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <p style="margin-top:1em;">
-                <button type="submit" class="button button-primary"><?php esc_html_e('Save changes', 'mcp-site-manager'); ?></button>
-                <button type="submit" name="reset" value="1" class="button" onclick="return confirm('<?php echo esc_js(__('Re-enable every ability?', 'mcp-site-manager')); ?>');"><?php esc_html_e('Reset to all-enabled', 'mcp-site-manager'); ?></button>
-            </p>
-        </form>
-
-        <script>
-        (function() {
-            var input = document.getElementById('mcpsm-ability-filter');
-            var counter = document.getElementById('mcpsm-ability-count');
-            var rows = document.querySelectorAll('tr.mcpsm-ability-row');
-            var total = rows.length;
-            function update() {
-                var q = input.value.trim().toLowerCase();
-                var shown = 0;
-                rows.forEach(function(row) {
-                    var haystack = row.dataset.haystack || '';
-                    var match = q === '' || haystack.indexOf(q) !== -1;
-                    row.style.display = match ? '' : 'none';
-                    if (match) shown++;
-                });
-                counter.textContent = (shown === total)
-                    ? (<?php echo wp_json_encode(__('Showing %d of %d', 'mcp-site-manager')); ?>).replace('%d', total).replace('%d', total)
-                    : (<?php echo wp_json_encode(__('Showing %d of %d', 'mcp-site-manager')); ?>).replace('%d', shown).replace('%d', total);
-            }
-            input.addEventListener('input', update);
-            update();
-        })();
-        </script>
+        <div id="mcpsm-abilities-root"><p><em><?php esc_html_e('Loading abilities…', 'mcp-site-manager'); ?></em></p></div>
         <?php
     }
 
@@ -308,47 +214,6 @@ final class SettingsPage
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    }
-
-    public static function handle_save_abilities(): void
-    {
-        if (!current_user_can('manage_options')) wp_die();
-        check_admin_referer('mcpsm_save_abilities');
-
-        if (!empty($_POST['reset'])) {
-            \Mrabbani\McpSiteManager\Support\DisabledAbilities::clear();
-        } else {
-            $enabled_raw = (array) ($_POST['enabled'] ?? []);
-            $enabled = array_map('sanitize_text_field', array_map('strval', $enabled_raw));
-            $all_local = self::all_local_ability_names();
-            $disabled  = array_values(array_diff($all_local, $enabled));
-            \Mrabbani\McpSiteManager\Support\DisabledAbilities::set($disabled);
-        }
-
-        wp_safe_redirect(add_query_arg(
-            ['page' => self::SLUG, 'tab' => 'abilities', 'updated' => 1],
-            admin_url('options-general.php')
-        ));
-        exit;
-    }
-
-    /** @return string[] All local ability names known to the plugin (regardless of enabled state). */
-    private static function all_local_ability_names(): array
-    {
-        $names = [];
-        foreach (\Mrabbani\McpSiteManager\Plugin::instance_bundles() as $bundle) {
-            foreach (array_keys($bundle->abilities()) as $local) $names[] = $local;
-        }
-        return $names;
-    }
-
-    /** Derive a friendly bundle label from the bundle's class basename. */
-    private static function bundle_label($bundle): string
-    {
-        $cls = get_class($bundle);
-        $base = substr($cls, strrpos($cls, '\\') + 1);
-        // "PostsBundle" -> "Posts"; "MaintenanceBundle" -> "Maintenance"
-        return preg_replace('/Bundle$/', '', $base);
     }
 
     private static function dot(bool $ok): string
