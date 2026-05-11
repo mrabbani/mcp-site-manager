@@ -30,4 +30,30 @@ final class Stats
             'success_rate' => $total > 0 ? $by['ok'] / $total : 0.0,
         ];
     }
+
+    /**
+     * @return array{avg_ms:int, p95_ms:int}
+     */
+    public static function latency(): array
+    {
+        global $wpdb;
+        $table = AbilityLog::table_name();
+
+        $row = $wpdb->get_row("SELECT AVG(duration_ms) AS avg_ms, COUNT(*) AS c FROM $table", ARRAY_A);
+        $avg = isset($row['avg_ms']) && $row['avg_ms'] !== null ? (int) round((float) $row['avg_ms']) : 0;
+        $count = (int) ($row['c'] ?? 0);
+
+        $p95 = 0;
+        if ($count > 0) {
+            $offset = (int) floor($count * 0.95);
+            if ($offset >= $count) $offset = $count - 1;
+            $val = $wpdb->get_var($wpdb->prepare(
+                "SELECT duration_ms FROM $table ORDER BY duration_ms ASC LIMIT 1 OFFSET %d",
+                $offset
+            ));
+            $p95 = $val === null ? 0 : (int) $val;
+        }
+
+        return ['avg_ms' => $avg, 'p95_ms' => $p95];
+    }
 }

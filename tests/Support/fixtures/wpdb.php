@@ -62,7 +62,7 @@ final class FakeWpdb
             $avg = $n === 0 ? null : array_sum(array_column($this->rows, 'duration_ms')) / $n;
             return [['avg_ms' => $avg, 'c' => $n]];
         }
-        if (preg_match('/SELECT\s+duration_ms\s+FROM[^O]*ORDER\s+BY\s+duration_ms\s+ASC\s+LIMIT\s+1\s+OFFSET\s+(\d+)/i', $sql, $m)) {
+        if (preg_match('/SELECT\s+duration_ms\s+FROM\s+\w+\s+ORDER\s+BY\s+duration_ms\s+ASC\s+LIMIT\s+1\s+OFFSET\s+(\d+)/i', $sql, $m)) {
             $offset = (int) $m[1];
             $sorted = array_column($this->rows, 'duration_ms');
             sort($sorted);

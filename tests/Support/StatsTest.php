@@ -60,4 +60,23 @@ final class StatsTest extends TestCase
         $this->assertSame(0, $r['error']);
         $this->assertSame(0.0, $r['success_rate']);
     }
+
+    public function test_latency_with_rows(): void
+    {
+        $this->wpdb->rows = [];
+        for ($i = 1; $i <= 100; $i++) {
+            $this->wpdb->rows[] = $this->row(['duration_ms' => $i * 10]);
+        }
+        $r = Stats::latency();
+        $this->assertSame(505, $r['avg_ms']);
+        $this->assertSame(960, $r['p95_ms']);
+    }
+
+    public function test_latency_empty(): void
+    {
+        $this->wpdb->rows = [];
+        $r = Stats::latency();
+        $this->assertSame(0, $r['avg_ms']);
+        $this->assertSame(0, $r['p95_ms']);
+    }
 }
