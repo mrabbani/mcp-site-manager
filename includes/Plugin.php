@@ -56,6 +56,7 @@ final class Plugin
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\LogController::class, 'register_routes']);
         add_action('admin_enqueue_scripts', [\Mrabbani\McpSiteManager\Admin\DashboardAssets::class, 'maybe_enqueue']);
         add_action('admin_enqueue_scripts', [\Mrabbani\McpSiteManager\Admin\AbilitiesAssets::class, 'maybe_enqueue']);
+        add_action('admin_enqueue_scripts', [\Mrabbani\McpSiteManager\Admin\LogAssets::class, 'maybe_enqueue']);
     }
 
     public function register_abilities(): void
