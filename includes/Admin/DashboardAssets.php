@@ -12,7 +12,7 @@ final class DashboardAssets
     public static function maybe_enqueue(string $hook_suffix): void
     {
         // Only on our settings page.
-        if ($hook_suffix !== 'settings_page_' . SettingsPage::SLUG) return;
+        if ($hook_suffix !== 'tools_page_' . SettingsPage::SLUG) return;
         // Only when the Dashboard tab is active.
         if (SettingsPage::current_tab() !== 'dashboard') return;
         if (!current_user_can('manage_options')) return;
@@ -38,7 +38,7 @@ final class DashboardAssets
             'tabUrls'  => [
                 'connection' => esc_url_raw(add_query_arg(
                     ['page' => SettingsPage::SLUG, 'tab' => 'connection'],
-                    admin_url('options-general.php')
+                    admin_url('tools.php')
                 )),
             ],
         ]);

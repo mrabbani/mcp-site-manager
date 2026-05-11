@@ -11,7 +11,7 @@ final class LogAssets
 
     public static function maybe_enqueue(string $hook_suffix): void
     {
-        if ($hook_suffix !== 'settings_page_' . SettingsPage::SLUG) return;
+        if ($hook_suffix !== 'tools_page_' . SettingsPage::SLUG) return;
         if (SettingsPage::current_tab() !== 'log') return;
         if (!current_user_can('manage_options')) return;
 

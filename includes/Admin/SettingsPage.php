@@ -18,7 +18,7 @@ final class SettingsPage
 
     public static function register(): void
     {
-        add_options_page(
+        add_management_page(
             __('MCP Site Manager', 'mcp-site-manager'),
             __('MCP Site Manager', 'mcp-site-manager'),
             'manage_options',
@@ -27,6 +27,23 @@ final class SettingsPage
         );
         add_action('admin_post_mcpsm_clear_log', [self::class, 'handle_clear_log']);
         add_action('admin_post_mcpsm_toggle_log', [self::class, 'handle_toggle_log']);
+        add_action('admin_init', [self::class, 'maybe_redirect_legacy_url']);
+    }
+
+    /**
+     * Back-compat: the page used to live under Settings (options-general.php).
+     * Redirect any bookmarked legacy URLs to the new Tools location.
+     */
+    public static function maybe_redirect_legacy_url(): void
+    {
+        if (!is_admin() || wp_doing_ajax()) return;
+        $script = isset($_SERVER['SCRIPT_NAME']) ? basename((string) $_SERVER['SCRIPT_NAME']) : '';
+        $page   = isset($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
+        if ($script !== 'options-general.php' || $page !== self::SLUG) return;
+        $args = ['page' => self::SLUG];
+        if (isset($_GET['tab'])) $args['tab'] = sanitize_key((string) $_GET['tab']);
+        wp_safe_redirect(add_query_arg($args, admin_url('tools.php')));
+        exit;
     }
 
     public static function current_tab(): string
@@ -61,7 +78,7 @@ final class SettingsPage
     {
         echo '<h2 class="nav-tab-wrapper">';
         foreach (self::TABS as $slug => $label) {
-            $url = add_query_arg(['page' => self::SLUG, 'tab' => $slug], admin_url('options-general.php'));
+            $url = add_query_arg(['page' => self::SLUG, 'tab' => $slug], admin_url('tools.php'));
             $class = 'nav-tab' . ($active === $slug ? ' nav-tab-active' : '');
             printf(
                 '<a href="%s" class="%s">%s</a>',
@@ -156,7 +173,7 @@ final class SettingsPage
         if (!current_user_can('manage_options')) wp_die();
         check_admin_referer('mcpsm_clear_log');
         AbilityLog::clear();
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'tab' => 'settings'], admin_url('options-general.php')));
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'tab' => 'settings'], admin_url('tools.php')));
         exit;
     }
 
@@ -165,7 +182,7 @@ final class SettingsPage
         if (!current_user_can('manage_options')) wp_die();
         check_admin_referer('mcpsm_toggle_log');
         update_option(AbilityLog::OPTION_ENABLED, AbilityLog::enabled() ? 0 : 1);
-        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'tab' => 'settings'], admin_url('options-general.php')));
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'tab' => 'settings'], admin_url('tools.php')));
         exit;
     }
 
