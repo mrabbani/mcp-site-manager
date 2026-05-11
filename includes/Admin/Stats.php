@@ -124,4 +124,42 @@ final class Stats
         }
         return $out;
     }
+
+    /**
+     * @return array{from:?string, to:?string, count:int}
+     */
+    public static function window(): array
+    {
+        global $wpdb;
+        $table = AbilityLog::table_name();
+        $row = $wpdb->get_row("SELECT MIN(ts) AS f, MAX(ts) AS t, COUNT(*) AS c FROM $table", ARRAY_A);
+        $count = (int) ($row['c'] ?? 0);
+        return [
+            'from'  => $count > 0 && !empty($row['f']) ? (string) $row['f'] : null,
+            'to'    => $count > 0 && !empty($row['t']) ? (string) $row['t'] : null,
+            'count' => $count,
+        ];
+    }
+
+    /**
+     * Combined payload for the dashboard's single-round-trip /stats/all endpoint.
+     *
+     * @return array{
+     *   counts: array{total:int, success:int, error:int, success_rate:float},
+     *   latency: array{avg_ms:int, p95_ms:int},
+     *   top_abilities: array<int, array{ability:string, calls:int, success_rate:float, avg_ms:int}>,
+     *   recent_errors: array<int, array{ts:string, ability:string, error_code:?string, user_id:int, user_login:?string}>,
+     *   window: array{from:?string, to:?string, count:int},
+     * }
+     */
+    public static function all(): array
+    {
+        return [
+            'counts'        => self::counts(),
+            'latency'       => self::latency(),
+            'top_abilities' => self::top_abilities(10),
+            'recent_errors' => self::recent_errors(20),
+            'window'        => self::window(),
+        ];
+    }
 }

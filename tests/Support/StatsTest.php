@@ -139,4 +139,38 @@ final class StatsTest extends TestCase
         }
         $this->assertCount(5, Stats::recent_errors(5));
     }
+
+    public function test_window_returns_min_max(): void
+    {
+        $this->wpdb->rows = [
+            $this->row(['ts' => '2026-05-09 14:32:00']),
+            $this->row(['ts' => '2026-05-10 09:15:00']),
+            $this->row(['ts' => '2026-05-11 11:44:00']),
+        ];
+        $r = Stats::window();
+        $this->assertSame('2026-05-09 14:32:00', $r['from']);
+        $this->assertSame('2026-05-11 11:44:00', $r['to']);
+        $this->assertSame(3, $r['count']);
+    }
+
+    public function test_window_empty(): void
+    {
+        $this->wpdb->rows = [];
+        $r = Stats::window();
+        $this->assertNull($r['from']);
+        $this->assertNull($r['to']);
+        $this->assertSame(0, $r['count']);
+    }
+
+    public function test_all_combines_every_section(): void
+    {
+        $this->wpdb->rows = [$this->row(['status' => 'ok'])];
+        $r = Stats::all();
+        $this->assertArrayHasKey('counts', $r);
+        $this->assertArrayHasKey('latency', $r);
+        $this->assertArrayHasKey('top_abilities', $r);
+        $this->assertArrayHasKey('recent_errors', $r);
+        $this->assertArrayHasKey('window', $r);
+        $this->assertSame(1, $r['counts']['total']);
+    }
 }
