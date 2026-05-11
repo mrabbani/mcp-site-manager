@@ -52,6 +52,7 @@ final class Plugin
         add_filter('mcp_adapter_default_server_config', [$this, 'extend_default_server']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\StatsController::class, 'register_routes']);
+        add_action('admin_enqueue_scripts', [\Mrabbani\McpSiteManager\Admin\DashboardAssets::class, 'maybe_enqueue']);
     }
 
     public function register_abilities(): void

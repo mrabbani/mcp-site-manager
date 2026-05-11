@@ -1,2 +1,12 @@
-/* MCP Site Manager dashboard — styles loaded with the build. */
-#mcpsm-dashboard-root { font-family: inherit; }
+/* MCP Site Manager dashboard layout. */
+#mcpsm-dashboard-root {
+    margin-top: 1em;
+
+    .components-card {
+        background: #fff;
+    }
+
+    table.widefat {
+        margin-top: 0;
+    }
+}
