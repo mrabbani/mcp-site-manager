@@ -25,7 +25,11 @@ abstract class AbilityBundle
 
     public function register(): void
     {
+        $disabled = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
         foreach ($this->abilities() as $local => $spec) {
+            if (in_array($local, $disabled, true)) {
+                continue;
+            }
             $name = "mcpsm/$local";
             wp_register_ability($name, [
                 'label'               => $spec['label'],
