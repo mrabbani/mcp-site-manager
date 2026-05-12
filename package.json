@@ -5,7 +5,8 @@
         "wp-env": "wp-env",
         "build": "wp-scripts build",
         "start": "wp-scripts start",
-        "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/mcp-site-manager ./vendor/bin/phpunit --testsuite=integration"
+        "test:int": "wp-env run tests-cli --env-cwd=wp-content/plugins/mcp-site-manager ./vendor/bin/phpunit --testsuite=integration",
+        "release:zip": "bash bin/release-zip.sh"
     },
     "devDependencies": {
         "@wordpress/dataviews": "^14.2.0",
