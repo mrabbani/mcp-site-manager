@@ -1,7 +1,7 @@
 === MCP Site Manager ===
 Contributors: mrabbani
 Tags: mcp, ai, automation, content-management, llm
-Requires at least: 6.8
+Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 8.0
 Stable tag: 0.1.0
