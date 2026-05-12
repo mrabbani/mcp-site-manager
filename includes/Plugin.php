@@ -44,6 +44,19 @@ final class Plugin
             return;
         }
 
+        // The MCP Adapter class may be loadable without anyone having called
+        // McpAdapter::instance() yet — notably when WooCommerce vendors the
+        // library but its mcp_integration feature flag is off. The class is
+        // there, but no REST routes are registered and the default server is
+        // 404. Trip the singleton ourselves so the default server (which
+        // surfaces every ability with meta.mcp.public = true) comes online
+        // without requiring the standalone MCP Adapter plugin. The adapter
+        // registers its own rest_api_init handler (priority 20000), which
+        // still fires for the current request.
+        if (class_exists('\\WP\\MCP\\Core\\McpAdapter')) {
+            \WP\MCP\Core\McpAdapter::instance();
+        }
+
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
         add_action('wp_abilities_api_init', [$this, 'register_abilities']);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
