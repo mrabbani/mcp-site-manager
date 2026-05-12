@@ -8,6 +8,8 @@
 
 MCP Site Manager exposes ~74 WordPress capabilities — content, taxonomies, media, comments, users, plugins, themes, options, navigation menus, diagnostics, cache and cron — as [Model Context Protocol](https://modelcontextprotocol.io/) tools. It plugs into the [WP MCP Adapter](https://github.com/WordPress/mcp-adapter) library (already bundled with WooCommerce 10.3+) and any MCP-compatible AI agent — Claude Desktop, Claude Code, Cursor, VS Code, ChatGPT — can drive your WordPress site.
 
+> 📖 **New to the WordPress MCP Adapter?** Read the official primer on the WordPress Developer Blog: [*From Abilities to AI Agents: Introducing the WordPress MCP Adapter*](https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/). It explains the Abilities API, the adapter's transports, and how clients connect.
+
 ## Quick start
 
 1. Install and activate MCP Site Manager.
