@@ -16,7 +16,9 @@ MCP Site Manager exposes ~74 WordPress capabilities (posts, pages, custom post t
 
 It plugs into the **MCP Adapter** library — already bundled with WooCommerce 10.3+, or installable in one click from the admin notice on activation — and connects to any MCP-compatible AI client (Claude Desktop, Claude Code, Cursor, VS Code, ChatGPT) via the HTTP transport (Application Password) or STDIO transport (WP-CLI, no password).
 
-New to the WordPress MCP Adapter? Read the official primer on the WordPress Developer Blog: https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/ — it explains the Abilities API, the adapter's transports, and how clients connect.
+New to the WordPress MCP Adapter? Read the official primer on the WordPress Developer Blog: https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/ — it explains the Abilities API and the adapter's transports.
+
+Need to wire up a specific AI client? Jump straight to the upstream walkthrough: https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/#connecting-ai-applications (Claude Desktop, Claude Code, Cursor, VS Code).
 
 * Read and write blog posts and pages
 * Manage tags, categories and custom taxonomies

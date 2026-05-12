@@ -43,6 +43,8 @@ The client invokes this command on its own; you don't run it manually.
 
 ## Connecting your AI client
 
+> 🔌 **See also**: [*Connecting AI applications*](https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/#connecting-ai-applications) on the WordPress Developer Blog — the upstream walkthrough for Claude Desktop, Claude Code, Cursor and VS Code, plus STDIO vs HTTP transport guidance. The snippets below are pre-adapted for this plugin's default server endpoint.
+
 Replace `https://your-site.com` and `your-username` / `your-password` (Application Password) with your own values. For STDIO, replace `/path/to/wordpress` with your wp-cli `--path`.
 
 ### Claude Desktop
