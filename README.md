@@ -10,12 +10,14 @@ MCP Site Manager exposes ~74 WordPress capabilities — content, taxonomies, med
 
 ## Quick start
 
-1. Install [MCP Adapter](https://github.com/WordPress/mcp-adapter) (required dependency).
-2. Install MCP Site Manager (this plugin).
-3. Activate both.
-4. Visit **Settings → MCP Site Manager** for the connection URL.
-5. Generate an Application Password from your user profile.
-6. Add the snippet to your MCP client config (example below).
+1. Install and activate MCP Site Manager (this plugin).
+2. If the MCP Adapter dependency is missing, an admin notice appears with an
+   **Install MCP Adapter** button — one click fetches it from the official
+   [WordPress/mcp-adapter](https://github.com/WordPress/mcp-adapter) repo and
+   activates it. Pin a release by filtering `mcpsm_adapter_download_url`.
+3. Visit **Settings → MCP Site Manager** for the connection URL.
+4. Generate an Application Password from your user profile.
+5. Add the snippet to your MCP client config (example below).
 
 ### Claude Desktop config
 
