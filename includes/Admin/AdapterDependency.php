@@ -12,7 +12,7 @@ namespace Mrabbani\McpSiteManager\Admin;
  * WordPress's own Plugin_Upgrader.
  *
  * The download URL is filterable (`mcpsm_adapter_download_url`) so site owners
- * can pin a specific release tag instead of tracking trunk.
+ * can pin a specific release tag instead of always tracking the latest.
  */
 final class AdapterDependency
 {
@@ -22,7 +22,10 @@ final class AdapterDependency
     private const NONCE_ACTIVATE  = 'mcpsm_activate_adapter_nonce';
     private const NOTICE_TRANSIENT = 'mcpsm_adapter_install_notice';
 
-    private const DEFAULT_DOWNLOAD_URL = 'https://github.com/WordPress/mcp-adapter/archive/refs/heads/trunk.zip';
+    // Per the MCP Adapter docs ("Installing the MCP Adapter"), the canonical
+    // download is the latest GitHub Release asset, which is a clean zip whose
+    // top-level folder is already `mcp-adapter/`.
+    private const DEFAULT_DOWNLOAD_URL = 'https://github.com/WordPress/mcp-adapter/releases/latest/download/mcp-adapter.zip';
 
     public static function register(): void
     {
