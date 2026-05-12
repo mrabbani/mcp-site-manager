@@ -33,6 +33,7 @@ rsync -a \
   --exclude='.DS_Store' \
   --exclude='.gstack/' \
   --exclude='.claude/' \
+  --exclude='.wordpress-org/' \
   --exclude='.wp-env.json' \
   --exclude='node_modules/' \
   --exclude='dist/' \
