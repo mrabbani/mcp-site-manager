@@ -35,6 +35,15 @@ final class AbilitiesController
             'callback'            => [self::class, 'reset'],
             'permission_callback' => $perm,
         ]);
+        register_rest_route(self::NAMESPACE, '/abilities/bulk-enabled', [
+            'methods'             => 'POST',
+            'callback'            => [self::class, 'bulk_update_enabled'],
+            'permission_callback' => $perm,
+            'args' => [
+                'ids'     => ['type' => 'array', 'required' => true, 'items' => ['type' => 'string']],
+                'enabled' => ['type' => 'boolean', 'required' => true],
+            ],
+        ]);
     }
 
     public static function permission_check()
@@ -63,6 +72,25 @@ final class AbilitiesController
             $disabled = array_values(array_diff($disabled, [$name]));
         } else {
             if (!in_array($name, $disabled, true)) $disabled[] = $name;
+        }
+        DisabledAbilities::set($disabled);
+        return new WP_REST_Response(self::snapshot());
+    }
+
+    public static function bulk_update_enabled(WP_REST_Request $r)
+    {
+        $ids = array_values(array_filter((array) $r->get_param('ids'), 'is_string'));
+        $enabled = (bool) $r->get_param('enabled');
+        $known = self::all_local_ability_names();
+        $unknown = array_values(array_diff($ids, $known));
+        if (!empty($unknown)) {
+            return new WP_Error('rest_unknown_ability', __('Unknown ability.', 'mcp-site-manager'), ['status' => 404, 'unknown' => $unknown]);
+        }
+        $disabled = DisabledAbilities::all();
+        if ($enabled) {
+            $disabled = array_values(array_diff($disabled, $ids));
+        } else {
+            $disabled = array_values(array_unique(array_merge($disabled, $ids)));
         }
         DisabledAbilities::set($disabled);
         return new WP_REST_Response(self::snapshot());

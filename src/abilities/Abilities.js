@@ -45,6 +45,45 @@ export default function Abilities() {
             .catch( ( e ) => setError( e.message || String( e ) ) );
     };
 
+    const bulkSetEnabled = ( selected, next ) => {
+        const ids = selected.map( ( i ) => i.id );
+        setItems( ( prev ) =>
+            prev.map( ( i ) => ( ids.includes( i.id ) ? { ...i, enabled: next } : i ) )
+        );
+        return apiFetch( {
+            path: '/mcp-site-manager/v1/abilities/bulk-enabled',
+            method: 'POST',
+            data: { ids, enabled: next },
+        } )
+            .then( ( r ) => setItems( r.items ) )
+            .catch( ( e ) => {
+                setError( e.message || String( e ) );
+                setItems( ( prev ) =>
+                    prev.map( ( i ) => ( ids.includes( i.id ) ? { ...i, enabled: !next } : i ) )
+                );
+            } );
+    };
+
+    const actions = useMemo(
+        () => [
+            {
+                id: 'bulk-enable',
+                label: __( 'Enable', 'mcp-site-manager' ),
+                supportsBulk: true,
+                isEligible: ( item ) => !item.enabled,
+                callback: ( selected ) => bulkSetEnabled( selected, true ),
+            },
+            {
+                id: 'bulk-disable',
+                label: __( 'Disable', 'mcp-site-manager' ),
+                supportsBulk: true,
+                isEligible: ( item ) => item.enabled,
+                callback: ( selected ) => bulkSetEnabled( selected, false ),
+            },
+        ],
+        []
+    );
+
     const fields = useMemo( () => {
         const bundleOptions = items
             ? Array.from( new Set( items.map( ( i ) => i.bundle ) ) ).sort().map( ( b ) => ( { value: b, label: b } ) )
@@ -132,6 +171,7 @@ export default function Abilities() {
                 onChangeView={ setView }
                 paginationInfo={ paginationInfo }
                 defaultLayouts={ { table: {} } }
+                actions={ actions }
                 getItemId={ ( item ) => String( item.id ) }
             />
         </>
