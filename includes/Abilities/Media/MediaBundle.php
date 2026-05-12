@@ -94,6 +94,8 @@ final class MediaBundle extends AbilityBundle
         }
 
         if (!empty($a['source_url'])) {
+            $ssrf_check = $this->validate_source_url($a['source_url']);
+            if (is_wp_error($ssrf_check)) return $ssrf_check;
             $tmp_path = download_url($a['source_url']);
             if (is_wp_error($tmp_path)) return $tmp_path;
             $filename = basename(parse_url($a['source_url'], PHP_URL_PATH) ?: 'upload');
@@ -157,5 +159,70 @@ final class MediaBundle extends AbilityBundle
             $result['featured_for_post'] = $parent;
         }
         return $result;
+    }
+
+    /**
+     * SSRF guard for source_url. Blocks non-http(s) schemes and private/loopback/link-local addresses
+     * so an MCP caller cannot pivot through the server to internal infrastructure.
+     */
+    private function validate_source_url(string $url)
+    {
+        $parts = wp_parse_url($url);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return new \WP_Error('mcpsm_media_ssrf', 'source_url must be an absolute http(s) URL.', ['status' => 400]);
+        }
+
+        $scheme = strtolower($parts['scheme']);
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return new \WP_Error('mcpsm_media_ssrf', 'Only http and https URLs are allowed.', ['status' => 400]);
+        }
+
+        $host = strtolower($parts['host']);
+        $allowed_hosts = apply_filters('mcpsm_media_upload_allowed_hosts', []);
+        if (is_array($allowed_hosts) && !empty($allowed_hosts) && !in_array($host, array_map('strtolower', $allowed_hosts), true)) {
+            return new \WP_Error('mcpsm_media_ssrf', 'Host is not on the configured allowlist.', ['status' => 400]);
+        }
+
+        $ips = [];
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $records = @dns_get_record($host, DNS_A + DNS_AAAA);
+            if (is_array($records)) {
+                foreach ($records as $r) {
+                    if (!empty($r['ip']))   $ips[] = $r['ip'];
+                    if (!empty($r['ipv6'])) $ips[] = $r['ipv6'];
+                }
+            }
+            if (empty($ips)) {
+                $resolved = @gethostbynamel($host);
+                if (is_array($resolved)) $ips = array_merge($ips, $resolved);
+            }
+        }
+
+        if (empty($ips)) {
+            return new \WP_Error('mcpsm_media_ssrf', 'Could not resolve source_url host.', ['status' => 400]);
+        }
+
+        foreach ($ips as $ip) {
+            if (!self::is_public_ip($ip)) {
+                return new \WP_Error(
+                    'mcpsm_media_ssrf',
+                    'source_url resolves to a private, loopback, or link-local address.',
+                    ['status' => 400]
+                );
+            }
+        }
+
+        return true;
+    }
+
+    private static function is_public_ip(string $ip): bool
+    {
+        return (bool) filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
     }
 }
