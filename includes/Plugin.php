@@ -19,14 +19,11 @@ final class Plugin
     public static function on_activate(): void
     {
         Admin\AbilityLog::install_table();
-        if (!self::dependencies_met()) {
-            deactivate_plugins(plugin_basename(MCPSM_FILE));
-            wp_die(
-                esc_html__('MCP Site Manager requires the MCP Adapter plugin and the Abilities API (WordPress 6.8+).', 'mcp-site-manager'),
-                esc_html__('Plugin activation failed', 'mcp-site-manager'),
-                ['back_link' => true]
-            );
-        }
+        // Dependency on MCP Adapter is enforced softly: if it is missing on
+        // activation, the AdapterDependency admin notice offers a one-click
+        // install. We deliberately do not deactivate here so that flow is
+        // reachable. WordPress core (>= 6.5) also surfaces the
+        // "Requires Plugins: mcp-adapter" header as a separate hint.
     }
 
     public static function on_deactivate(): void
@@ -43,8 +40,21 @@ final class Plugin
     private function register_hooks(): void
     {
         if (!self::dependencies_met()) {
-            add_action('admin_notices', [$this, 'render_missing_deps_notice']);
+            Admin\AdapterDependency::register();
             return;
+        }
+
+        // The MCP Adapter class may be loadable without anyone having called
+        // McpAdapter::instance() yet — notably when WooCommerce vendors the
+        // library but its mcp_integration feature flag is off. The class is
+        // there, but no REST routes are registered and the default server is
+        // 404. Trip the singleton ourselves so the default server (which
+        // surfaces every ability with meta.mcp.public = true) comes online
+        // without requiring the standalone MCP Adapter plugin. The adapter
+        // registers its own rest_api_init handler (priority 20000), which
+        // still fires for the current request.
+        if (class_exists('\\WP\\MCP\\Core\\McpAdapter')) {
+            \WP\MCP\Core\McpAdapter::instance();
         }
 
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
@@ -71,13 +81,6 @@ final class Plugin
             'label'       => __('MCP Site Manager', 'mcp-site-manager'),
             'description' => __('WordPress site management abilities exposed to MCP clients.', 'mcp-site-manager'),
         ]);
-    }
-
-    public function render_missing_deps_notice(): void
-    {
-        echo '<div class="notice notice-error"><p>';
-        echo esc_html__('MCP Site Manager is inactive: install and activate the MCP Adapter plugin (requires WordPress 6.8+).', 'mcp-site-manager');
-        echo '</p></div>';
     }
 
     /** @return Abilities\AbilityBundle[] */

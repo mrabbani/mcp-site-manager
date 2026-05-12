@@ -101,12 +101,26 @@ final class SettingsPage
         $endpoint = rest_url('mcp/mcp-adapter-default-server');
         $deps_ok  = Plugin::dependencies_met();
         $apppw_ok = function_exists('wp_is_application_passwords_available') ? wp_is_application_passwords_available() : true;
+
+        // The default server's REST routes register on rest_api_init priority 15
+        // (inside McpAdapter::init()). On a plain admin page load that hook
+        // hasn't fired yet, so the third dot reflects bootstrap state, not
+        // whether routes are currently in $wp_rest_server. After our self-
+        // bootstrap (Plugin::register_hooks calls McpAdapter::instance()),
+        // init() is guaranteed to run when rest_api_init fires.
+        $init_fired = did_action('mcp_adapter_init') > 0;
         ?>
         <h2><?php esc_html_e('Status', 'mcp-site-manager'); ?></h2>
         <ul>
-            <li><?php echo self::dot($deps_ok); ?> <?php esc_html_e('MCP Adapter & Abilities API available', 'mcp-site-manager'); ?></li>
+            <li><?php echo self::dot($deps_ok); ?> <?php esc_html_e('MCP Adapter library reachable', 'mcp-site-manager'); ?></li>
             <li><?php echo self::dot($apppw_ok); ?> <?php esc_html_e('Application Passwords enabled', 'mcp-site-manager'); ?></li>
-            <li><?php echo self::dot(true); ?> <?php printf(esc_html__('Abilities exposed via %s', 'mcp-site-manager'), '<code>mcp-adapter-default-server</code>'); ?></li>
+            <li><?php echo self::dot($deps_ok); ?> <?php
+                if ($init_fired) {
+                    printf(esc_html__('Default server live at %s', 'mcp-site-manager'), '<code>mcp-adapter-default-server</code>');
+                } else {
+                    printf(esc_html__('Default server ready at %s (initializes on the next REST request)', 'mcp-site-manager'), '<code>mcp-adapter-default-server</code>');
+                }
+            ?></li>
         </ul>
 
         <h2><?php esc_html_e('Connection', 'mcp-site-manager'); ?></h2>
@@ -121,6 +135,13 @@ final class SettingsPage
             );
         ?></p>
         <pre><?php echo esc_html(self::client_config_snippet($endpoint)); ?></pre>
+        <p style="margin-top:1em;"><em><?php
+            printf(
+                /* translators: %s: link to the WordPress Developer Blog walkthrough */
+                esc_html__('Need help wiring up a specific client (Claude Desktop, Claude Code, Cursor, VS Code) or want STDIO transport for local dev? See the upstream walkthrough: %s.', 'mcp-site-manager'),
+                '<a href="https://developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/#connecting-ai-applications" target="_blank" rel="noopener noreferrer">' . esc_html__('Connecting AI applications', 'mcp-site-manager') . ' ↗</a>'
+            );
+        ?></em></p>
         <?php
     }
 
@@ -203,12 +224,25 @@ final class SettingsPage
 
     private static function client_config_snippet(string $endpoint): string
     {
+        $user     = wp_get_current_user();
+        $username = ($user && $user->exists()) ? $user->user_login : 'your-username';
+
+        // Matches the article's HTTP transport shape:
+        // developer.wordpress.org/news/2026/02/from-abilities-to-ai-agents-introducing-the-wordpress-mcp-adapter/#connecting-ai-applications
+        // The @automattic/mcp-wordpress-remote proxy bridges JSON-RPC stdio to
+        // HTTPS with Application Password basic auth. Works for Claude Desktop,
+        // Claude Code, and Cursor as-is. VS Code uses the `servers` key instead
+        // of `mcpServers` (see README).
         return json_encode([
             'mcpServers' => [
                 'mcp-site-manager' => [
-                    'transport' => 'http',
-                    'url'       => $endpoint,
-                    'headers'   => ['Authorization' => 'Basic ' . base64_encode('USERNAME:APP_PASSWORD')],
+                    'command' => 'npx',
+                    'args'    => ['-y', '@automattic/mcp-wordpress-remote@latest'],
+                    'env'     => [
+                        'WP_API_URL'      => $endpoint,
+                        'WP_API_USERNAME' => $username,
+                        'WP_API_PASSWORD' => 'your application password',
+                    ],
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
