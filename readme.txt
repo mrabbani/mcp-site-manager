@@ -92,9 +92,11 @@ The plugin activates per-site. Uninstall cleans up data on every site in the net
 
 == Screenshots ==
 
-1. The MCP Site Manager admin screen — connection URL and example client config.
-2. Per-ability toggles for fine-grained control over which tools are exposed.
-3. The activity log — every MCP tool call with user, status, and duration.
+1. Dashboard — at-a-glance status of the MCP Adapter dependency, ability counts, and recent activity.
+2. Connection — copy-paste connection URL and ready-to-use client config snippets for Claude, Cursor, and other MCP clients.
+3. Abilities — per-ability toggles with bulk enable/disable for fine-grained control over which tools are exposed.
+4. Activity log — every MCP tool call recorded with user, status, duration, and error code; filterable and searchable.
+5. Settings — toggle activity logging, configure log retention, and adjust other plugin-wide options.
 
 == Changelog ==
 
