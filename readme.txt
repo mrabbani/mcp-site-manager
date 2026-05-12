@@ -78,9 +78,11 @@ Exactly the permissions of the WordPress user whose Application Password is used
 
 Only to the MCP client you connect — that is, only in direct response to tool calls your AI client makes against your site. The plugin makes no outbound calls except those listed in the Privacy section above.
 
-= Can I disable individual abilities? =
+= Can I hide individual abilities from MCP clients? =
 
-Yes. The **MCP Site Manager** admin screen has per-ability toggles. Disabled abilities are not exposed to MCP clients.
+Yes. The **MCP Site Manager** admin screen has per-ability toggles that cover every registered WordPress ability — your own `mcpsm/*` and third-party namespaces like `woocommerce/*`. Hidden abilities stay in the Abilities API but their `meta.mcp.public` is flipped to `false`, which removes them from the **default MCP server** (`mcp-adapter-default-server`) — they no longer appear in `discover-abilities` and `execute-ability` rejects them.
+
+Limitation: this controls visibility on the *default* server only. Custom MCP servers built by other plugins with explicit tool lists (e.g. WooCommerce's `woocommerce/mcp` endpoint, which enumerates `woocommerce/*` directly) are not affected — disable those through that plugin's own controls.
 
 = Can I extend the options allowlist? =
 
@@ -103,7 +105,7 @@ The plugin activates per-site. Uninstall cleans up data on every site in the net
 * Guided install: admin notice with one-click *Install MCP Adapter* button when the dependency is missing.
 * Self-bootstrap: the MCP Adapter library is initialized automatically when reachable (e.g. WooCommerce sites), removing the need for a separate plugin install.
 * SSRF protection on media-upload source URLs.
-* Per-ability disable toggles.
+* Per-ability MCP visibility toggles for every registered ability (`mcpsm/*` + third-party namespaces like `woocommerce/*`), with bulk Show/Hide actions. Toggles flip `meta.mcp.public` on the default server; abilities remain in the Abilities API.
 * Activity log with server-side pagination, search, and filtering.
 * Options allowlist with filterable denylist prefixes.
 * Filter: `mcpsm_adapter_download_url` for pinning a specific MCP Adapter release.

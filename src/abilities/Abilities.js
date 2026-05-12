@@ -10,7 +10,7 @@ const DEFAULT_VIEW = {
     perPage: 20,
     search: '',
     sort: { field: 'name', direction: 'asc' },
-    fields: [ 'name', 'bundle', 'description', 'tool_name', 'enabled' ],
+    fields: [ 'name', 'namespace', 'bundle', 'description', 'tool_name', 'enabled' ],
     layout: {},
 };
 
@@ -67,15 +67,15 @@ export default function Abilities() {
     const actions = useMemo(
         () => [
             {
-                id: 'bulk-enable',
-                label: __( 'Enable', 'mcp-site-manager' ),
+                id: 'bulk-show',
+                label: __( 'Show on MCP', 'mcp-site-manager' ),
                 supportsBulk: true,
                 isEligible: ( item ) => !item.enabled,
                 callback: ( selected ) => bulkSetEnabled( selected, true ),
             },
             {
-                id: 'bulk-disable',
-                label: __( 'Disable', 'mcp-site-manager' ),
+                id: 'bulk-hide',
+                label: __( 'Hide from MCP', 'mcp-site-manager' ),
                 supportsBulk: true,
                 isEligible: ( item ) => item.enabled,
                 callback: ( selected ) => bulkSetEnabled( selected, false ),
@@ -85,8 +85,15 @@ export default function Abilities() {
     );
 
     const fields = useMemo( () => {
+        const namespaceOptions = items
+            ? Array.from( new Set( items.map( ( i ) => i.namespace ).filter( Boolean ) ) )
+                .sort()
+                .map( ( n ) => ( { value: n, label: n } ) )
+            : [];
         const bundleOptions = items
-            ? Array.from( new Set( items.map( ( i ) => i.bundle ) ) ).sort().map( ( b ) => ( { value: b, label: b } ) )
+            ? Array.from( new Set( items.map( ( i ) => i.bundle ).filter( Boolean ) ) )
+                .sort()
+                .map( ( b ) => ( { value: b, label: b } ) )
             : [];
         return [
             {
@@ -96,10 +103,34 @@ export default function Abilities() {
                 render: ( { item } ) => <code>{ item.name }</code>,
             },
             {
+                id: 'namespace',
+                label: __( 'Namespace', 'mcp-site-manager' ),
+                enableGlobalSearch: true,
+                elements: namespaceOptions,
+                render: ( { item } ) => (
+                    <span
+                        style={ {
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            background:
+                                item.namespace === 'mcpsm' ? '#dcdcde' : '#e0e8f5',
+                            color: '#1d2327',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                        } }
+                    >
+                        { item.namespace }
+                    </span>
+                ),
+            },
+            {
                 id: 'bundle',
                 label: __( 'Bundle', 'mcp-site-manager' ),
                 enableGlobalSearch: true,
                 elements: bundleOptions,
+                render: ( { item } ) =>
+                    item.bundle ? item.bundle : <span style={ { color: '#646970' } }>—</span>,
             },
             {
                 id: 'description',
@@ -113,7 +144,7 @@ export default function Abilities() {
             },
             {
                 id: 'enabled',
-                label: __( 'Enabled', 'mcp-site-manager' ),
+                label: __( 'On MCP', 'mcp-site-manager' ),
                 render: ( { item } ) => (
                     <ToggleControl
                         checked={ item.enabled }
@@ -122,8 +153,8 @@ export default function Abilities() {
                     />
                 ),
                 elements: [
-                    { value: true, label: __( 'Enabled', 'mcp-site-manager' ) },
-                    { value: false, label: __( 'Disabled', 'mcp-site-manager' ) },
+                    { value: true, label: __( 'Shown on MCP', 'mcp-site-manager' ) },
+                    { value: false, label: __( 'Hidden from MCP', 'mcp-site-manager' ) },
                 ],
             },
         ];
@@ -153,10 +184,10 @@ export default function Abilities() {
         <>
             <div style={ { display: 'flex', gap: '1em', alignItems: 'center', marginBottom: '1em' } }>
                 <Button variant="secondary" onClick={ reset } disabled={ disabledCount === 0 }>
-                    { __( 'Re-enable all', 'mcp-site-manager' ) }
+                    { __( 'Show all on MCP', 'mcp-site-manager' ) }
                 </Button>
                 <span style={ { color: '#646970' } }>
-                    { disabledCount } { __( 'disabled', 'mcp-site-manager' ) } / { items.length } { __( 'total', 'mcp-site-manager' ) }
+                    { disabledCount } { __( 'hidden', 'mcp-site-manager' ) } / { items.length } { __( 'total', 'mcp-site-manager' ) }
                 </span>
             </div>
             { error && (

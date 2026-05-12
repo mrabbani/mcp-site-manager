@@ -149,7 +149,7 @@ final class SettingsPage
     {
         ?>
         <h2><?php esc_html_e('Registered abilities', 'mcp-site-manager'); ?></h2>
-        <p><?php esc_html_e('Disable individual abilities to hide them from MCP clients. Disabled abilities are not registered with WordPress and cannot be invoked. Changes take effect on the next page load and on the next MCP client reconnect.', 'mcp-site-manager'); ?></p>
+        <p><?php esc_html_e('Toggle whether each ability is shown on the MCP default server. This lists every registered WordPress ability — your own mcpsm/* and any third-party namespaces (e.g. woocommerce/*). Hiding an ability flips its meta.mcp.public flag to false so discover-abilities and execute-ability no longer expose it; the ability itself remains registered with the Abilities API. Custom MCP servers built by other plugins with explicit tool lists are not affected. Changes take effect on the next page load and on the next MCP client reconnect.', 'mcp-site-manager'); ?></p>
         <div id="mcpsm-abilities-root"><p><em><?php esc_html_e('Loading abilities…', 'mcp-site-manager'); ?></em></p></div>
         <?php
     }

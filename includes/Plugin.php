@@ -59,6 +59,15 @@ final class Plugin
 
         add_action('wp_abilities_api_categories_init', [$this, 'register_category']);
         add_action('wp_abilities_api_init', [$this, 'register_abilities']);
+
+        // Hide disabled abilities from the MCP Adapter default server.
+        // Setting meta.mcp.public = false prevents the ability from appearing
+        // in discover-abilities, get-ability-info, and rejects execute-ability
+        // calls. Works for our own mcpsm/* abilities AND any third-party
+        // ability that opted into the MCP default server (e.g. core/*).
+        // Note: custom MCP servers built with explicit tool lists
+        // (e.g. WooCommerce's woocommerce/mcp endpoint) are unaffected.
+        add_filter('wp_register_ability_args', [$this, 'maybe_hide_from_mcp'], 10, 2);
         add_action('admin_menu', [Admin\SettingsPage::class, 'register']);
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\StatsController::class, 'register_routes']);
         add_action('rest_api_init', [\Mrabbani\McpSiteManager\Admin\Rest\AbilitiesController::class, 'register_routes']);
@@ -73,6 +82,25 @@ final class Plugin
         foreach ($this->bundles() as $bundle) {
             $bundle->register();
         }
+    }
+
+    /**
+     * wp_register_ability_args filter: hide any ability the admin has disabled
+     * from the MCP Adapter default server. The ability still registers normally
+     * with the Abilities API; only its meta.mcp.public flag is flipped to false.
+     *
+     * @param array  $args         Registration args.
+     * @param string $ability_name Fully-qualified name (e.g. "mcpsm/posts-list").
+     */
+    public function maybe_hide_from_mcp(array $args, string $ability_name): array
+    {
+        $disabled = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
+        if (in_array($ability_name, $disabled, true)) {
+            $args['meta']                   = (array) ($args['meta'] ?? []);
+            $args['meta']['mcp']            = (array) ($args['meta']['mcp'] ?? []);
+            $args['meta']['mcp']['public']  = false;
+        }
+        return $args;
     }
 
     public function register_category(): void
