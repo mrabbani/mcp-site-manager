@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Plugin;
 
 final class SettingsPage
@@ -15,6 +17,18 @@ final class SettingsPage
         'log'        => 'Activity Log',
         'settings'   => 'Settings',
     ];
+
+    /** @return array<string,string> Localized tab labels. */
+    private static function tab_labels(): array
+    {
+        return [
+            'dashboard'  => __('Dashboard', 'mcp-site-manager'),
+            'connection' => __('Connection', 'mcp-site-manager'),
+            'abilities'  => __('Abilities', 'mcp-site-manager'),
+            'log'        => __('Activity Log', 'mcp-site-manager'),
+            'settings'   => __('Settings', 'mcp-site-manager'),
+        ];
+    }
 
     public static function register(): void
     {
@@ -37,18 +51,24 @@ final class SettingsPage
     public static function maybe_redirect_legacy_url(): void
     {
         if (!is_admin() || wp_doing_ajax()) return;
-        $script = isset($_SERVER['SCRIPT_NAME']) ? basename((string) $_SERVER['SCRIPT_NAME']) : '';
-        $page   = isset($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
+        // Read-only routing check on an admin page URL; not a form submission so no nonce.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $script = isset($_SERVER['SCRIPT_NAME']) ? basename(sanitize_text_field(wp_unslash($_SERVER['SCRIPT_NAME']))) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if ($script !== 'options-general.php' || $page !== self::SLUG) return;
         $args = ['page' => self::SLUG];
-        if (isset($_GET['tab'])) $args['tab'] = sanitize_key((string) $_GET['tab']);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (isset($_GET['tab'])) $args['tab'] = sanitize_key(wp_unslash($_GET['tab']));
         wp_safe_redirect(add_query_arg($args, admin_url('tools.php')));
         exit;
     }
 
     public static function current_tab(): string
     {
-        $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'dashboard';
+        // Read-only tab routing for an admin screen; not a form submission so no nonce.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'dashboard';
         return array_key_exists($tab, self::TABS) ? $tab : 'dashboard';
     }
 
@@ -76,15 +96,17 @@ final class SettingsPage
 
     private static function render_nav(string $active): void
     {
+        $labels = self::tab_labels();
         echo '<h2 class="nav-tab-wrapper">';
-        foreach (self::TABS as $slug => $label) {
-            $url = add_query_arg(['page' => self::SLUG, 'tab' => $slug], admin_url('tools.php'));
+        foreach (self::TABS as $slug => $_default_label) {
+            $url   = add_query_arg(['page' => self::SLUG, 'tab' => $slug], admin_url('tools.php'));
             $class = 'nav-tab' . ($active === $slug ? ' nav-tab-active' : '');
+            $label = $labels[$slug] ?? $slug;
             printf(
                 '<a href="%s" class="%s">%s</a>',
                 esc_url($url),
                 esc_attr($class),
-                esc_html__($label, 'mcp-site-manager')
+                esc_html($label)
             );
         }
         echo '</h2>';
@@ -110,14 +132,17 @@ final class SettingsPage
         // init() is guaranteed to run when rest_api_init fires.
         $init_fired = did_action('mcp_adapter_init') > 0;
         ?>
+        <?php $dot_allowed = ['span' => ['style' => true]]; ?>
         <h2><?php esc_html_e('Status', 'mcp-site-manager'); ?></h2>
         <ul>
-            <li><?php echo self::dot($deps_ok); ?> <?php esc_html_e('MCP Adapter library reachable', 'mcp-site-manager'); ?></li>
-            <li><?php echo self::dot($apppw_ok); ?> <?php esc_html_e('Application Passwords enabled', 'mcp-site-manager'); ?></li>
-            <li><?php echo self::dot($deps_ok); ?> <?php
+            <li><?php echo wp_kses(self::dot($deps_ok), $dot_allowed); ?> <?php esc_html_e('MCP Adapter library reachable', 'mcp-site-manager'); ?></li>
+            <li><?php echo wp_kses(self::dot($apppw_ok), $dot_allowed); ?> <?php esc_html_e('Application Passwords enabled', 'mcp-site-manager'); ?></li>
+            <li><?php echo wp_kses(self::dot($deps_ok), $dot_allowed); ?> <?php
                 if ($init_fired) {
+                    /* translators: %s: REST route slug for the default MCP server, wrapped in <code>. */
                     printf(esc_html__('Default server live at %s', 'mcp-site-manager'), '<code>mcp-adapter-default-server</code>');
                 } else {
+                    /* translators: %s: REST route slug for the default MCP server, wrapped in <code>. */
                     printf(esc_html__('Default server ready at %s (initializes on the next REST request)', 'mcp-site-manager'), '<code>mcp-adapter-default-server</code>');
                 }
             ?></li>
@@ -130,6 +155,7 @@ final class SettingsPage
         </p>
         <p><?php
             printf(
+                /* translators: %s: link to the user's WordPress profile page (Application Passwords section). */
                 esc_html__('Generate an Application Password from %s, then add this snippet to your MCP client config:', 'mcp-site-manager'),
                 '<a href="' . esc_url(admin_url('profile.php#application-passwords-section')) . '">' . esc_html__('your profile', 'mcp-site-manager') . '</a>'
             );
@@ -182,6 +208,7 @@ final class SettingsPage
         </form>
         <p style="margin-top:1em;"><em><?php
             printf(
+                /* translators: %s: bolded current logging state — "on" or "off". */
                 esc_html__('Logging is currently %s.', 'mcp-site-manager'),
                 $log_on ? '<strong>' . esc_html__('on', 'mcp-site-manager') . '</strong>' : '<strong>' . esc_html__('off', 'mcp-site-manager') . '</strong>'
             );

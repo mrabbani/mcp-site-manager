@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin\Rest;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Plugin;
 use Mrabbani\McpSiteManager\Support\DisabledAbilities;
 use WP_Error;

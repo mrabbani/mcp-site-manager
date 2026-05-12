@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Abilities\Options;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
 use Mrabbani\McpSiteManager\Support\OptionsAllowlist;
 use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;

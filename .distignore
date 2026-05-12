@@ -1,0 +1,27 @@
+# Files and directories excluded from the distributable plugin ZIP.
+# Also consumed by Plugin Check so dev-only artifacts do not trigger errors
+# when scanning the source folder. Keep in sync with bin/release-zip.sh.
+
+/.git
+/.github
+/.gitignore
+/.gitattributes
+/.distignore
+/.DS_Store
+/.gstack
+/.claude
+/.wordpress-org
+/.wp-env.json
+/.phpunit.result.cache
+/node_modules
+/dist
+/src
+/tests
+/docs
+/bin
+/package.json
+/package-lock.json
+/composer.json
+/composer.lock
+/webpack.config.js
+/phpunit.xml.dist

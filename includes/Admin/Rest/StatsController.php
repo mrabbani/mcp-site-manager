@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin\Rest;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Admin\Stats;
 use WP_REST_Request;
 use WP_REST_Response;

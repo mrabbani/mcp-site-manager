@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Abilities;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Support\AbilityRunner;
 use Mrabbani\McpSiteManager\Support\RestInvoker;
 

@@ -12,28 +12,33 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
+// One-time cleanup. Table name is $wpdb->prefix . internal constant; SchemaChange and DirectQuery are required for uninstall.
+// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 global $wpdb;
 
-$options = [
+$mcpsm_options = [
     'mcpsm_log_enabled',
     'mcpsm_disabled_abilities',
 ];
 
 if (is_multisite()) {
-    $site_ids = get_sites(['fields' => 'ids']);
-    foreach ($site_ids as $site_id) {
-        switch_to_blog((int) $site_id);
-        foreach ($options as $option) {
-            delete_option($option);
+    $mcpsm_site_ids = get_sites(['fields' => 'ids']);
+    foreach ($mcpsm_site_ids as $mcpsm_site_id) {
+        switch_to_blog((int) $mcpsm_site_id);
+        foreach ($mcpsm_options as $mcpsm_option) {
+            delete_option($mcpsm_option);
         }
-        $table = $wpdb->prefix . 'mcpsm_log';
-        $wpdb->query("DROP TABLE IF EXISTS `$table`");
+        $mcpsm_table = $wpdb->prefix . 'mcpsm_log';
+        $wpdb->query("DROP TABLE IF EXISTS `{$mcpsm_table}`");
         restore_current_blog();
     }
 } else {
-    foreach ($options as $option) {
-        delete_option($option);
+    foreach ($mcpsm_options as $mcpsm_option) {
+        delete_option($mcpsm_option);
     }
-    $table = $wpdb->prefix . 'mcpsm_log';
-    $wpdb->query("DROP TABLE IF EXISTS `$table`");
+    $mcpsm_table = $wpdb->prefix . 'mcpsm_log';
+    $wpdb->query("DROP TABLE IF EXISTS `{$mcpsm_table}`");
 }
+
+// phpcs:enable

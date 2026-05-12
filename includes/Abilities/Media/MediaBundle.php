@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Abilities\Media;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
 use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
 
@@ -98,7 +100,7 @@ final class MediaBundle extends AbilityBundle
             if (is_wp_error($ssrf_check)) return $ssrf_check;
             $tmp_path = download_url($a['source_url']);
             if (is_wp_error($tmp_path)) return $tmp_path;
-            $filename = basename(parse_url($a['source_url'], PHP_URL_PATH) ?: 'upload');
+            $filename = basename(wp_parse_url($a['source_url'], PHP_URL_PATH) ?: 'upload');
             if (!preg_match('/\.[a-z0-9]+$/i', $filename)) {
                 $mime = function_exists('mime_content_type') ? @mime_content_type($tmp_path) : '';
                 $ext  = ($mime && function_exists('wp_get_default_extension_for_mime_type'))
@@ -136,7 +138,7 @@ final class MediaBundle extends AbilityBundle
         $attachment_id = media_handle_sideload($file, $parent, $a['title'] ?? null);
 
         if (is_wp_error($attachment_id)) {
-            @unlink($tmp_path);
+            wp_delete_file($tmp_path);
             return $attachment_id;
         }
 

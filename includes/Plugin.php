@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager;
 
+defined('ABSPATH') || exit;
+
 final class Plugin
 {
     private static ?self $instance = null;
