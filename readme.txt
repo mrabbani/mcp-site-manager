@@ -12,7 +12,7 @@ Control your WordPress site from Claude, ChatGPT, Cursor, and any other Model Co
 
 == Description ==
 
-**MCP Site Manager** turns your WordPress site into a tool any MCP-compatible AI client can drive. It registers ~74 capabilities — covering posts, pages, taxonomies, media, comments, users, plugins, themes, options, navigation menus, site health and maintenance — as WordPress Abilities, which the companion [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) library then exposes over MCP transports.
+**MCP Site Manager** turns your WordPress site into a tool any MCP-compatible AI client can drive. It registers ~80 capabilities — covering posts, pages, taxonomies, media, comments, users, plugins, themes, options, navigation menus, the block editor & FSE design system, site health and maintenance — as WordPress Abilities, which the companion [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) library then exposes over MCP transports.
 
 The MCP Adapter is already bundled with WooCommerce 10.3+; on other sites the plugin offers a one-click *Install MCP Adapter* button on activation. Connect Claude Desktop, Claude Code, Cursor, VS Code, ChatGPT, or any other MCP client via the HTTP transport (Application Password) or STDIO transport (WP-CLI, no password). No third-party services. No data leaves your site except in direct response to a tool call from your authenticated client.
 
@@ -30,6 +30,7 @@ Need to wire up a specific AI client? Jump straight to the upstream walkthrough:
 * **Plugins & Themes** — search the .org directories, install, activate, update, delete.
 * **Options** — read and update a curated, filterable allowlist of safe site options (siteurl, blog title, timezone, etc.). Plugin-internal `mcpsm_*` keys are always denied.
 * **Navigation Menus** — create menus, add/remove items, set locations.
+* **Block editor & FSE** — list registered blocks (with full attributes/supports schemas), block categories, patterns, FSE templates and template parts, and theme.json design tokens (palette, font sizes, spacing scale). Lets MCP clients write valid block markup that respects your theme's design vocabulary.
 * **Diagnostics** — site health overview, recent debug log tail, PHP/WP environment summary.
 * **Maintenance** — flush caches, list and trigger WP-cron events.
 

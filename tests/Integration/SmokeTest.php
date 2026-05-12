@@ -9,15 +9,51 @@ final class SmokeTest extends IntegrationCase
     {
         $r = $this->call('tools/list');
         $names = array_map(fn($t) => $t['name'], $r['result']['tools'] ?? []);
-        $this->assertGreaterThanOrEqual(70, count($names));
+        $this->assertGreaterThanOrEqual(75, count($names));
         foreach ([
             'mcpsm-posts-list', 'mcpsm-pages-create', 'mcpsm-cpt-list-types',
             'mcpsm-terms-list', 'mcpsm-media-upload', 'mcpsm-comments-moderate',
             'mcpsm-users-me', 'mcpsm-plugins-list', 'mcpsm-themes-list',
             'mcpsm-options-list', 'mcpsm-menus-list', 'mcpsm-health-overview',
             'mcpsm-cache-flush-rewrite',
+            'mcpsm-blocks-list', 'mcpsm-blocks-get', 'mcpsm-block-categories-list',
+            'mcpsm-block-patterns-list', 'mcpsm-block-pattern-categories-list',
+            'mcpsm-templates-list', 'mcpsm-template-parts-list',
+            'mcpsm-global-styles-get',
         ] as $expected) {
             $this->assertContains($expected, $names, "missing tool: $expected");
+        }
+    }
+
+    public function test_blocks_list_returns_core_paragraph(): void
+    {
+        $r = $this->tool('mcpsm-blocks-list', ['search' => 'paragraph']);
+        $items = $r['result']['structuredContent']['items'] ?? [];
+        $names = array_column($items, 'name');
+        $this->assertContains('core/paragraph', $names, json_encode($r));
+    }
+
+    public function test_blocks_get_returns_full_attributes(): void
+    {
+        $r = $this->tool('mcpsm-blocks-get', ['name' => 'core/paragraph']);
+        $sc = $r['result']['structuredContent'] ?? [];
+        $this->assertSame('core/paragraph', $sc['name'] ?? null);
+        $this->assertArrayHasKey('attributes', $sc);
+        $this->assertArrayHasKey('supports', $sc);
+    }
+
+    public function test_blocks_get_unknown_block_errors(): void
+    {
+        $r = $this->tool('mcpsm-blocks-get', ['name' => 'core/this-block-does-not-exist']);
+        $this->assertTrue($r['result']['isError'] ?? false, json_encode($r));
+    }
+
+    public function test_global_styles_returns_design_tokens(): void
+    {
+        $r = $this->tool('mcpsm-global-styles-get');
+        $sc = $r['result']['structuredContent'] ?? [];
+        foreach (['is_block_theme', 'color', 'typography', 'spacing', 'layout'] as $k) {
+            $this->assertArrayHasKey($k, $sc);
         }
     }
 

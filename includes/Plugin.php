@@ -100,6 +100,7 @@ final class Plugin
             new Abilities\Themes\ThemesBundle(),
             new Abilities\Options\OptionsBundle(),
             new Abilities\Menus\MenusBundle(),
+            new Abilities\Blocks\BlocksBundle(),
             new Abilities\Diagnostics\DiagnosticsBundle(),
             new Abilities\Maintenance\MaintenanceBundle(),
         ];
