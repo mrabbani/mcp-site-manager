@@ -59,7 +59,7 @@ Config at `~/Library/Application Support/Claude/claude_desktop_config.json` (mac
       "env": {
         "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
         "WP_API_USERNAME": "your-username",
-        "WP_API_PASSWORD": "abcd efgh ijkl mnop qrst uvwx"
+        "WP_API_PASSWORD": "your application password"
       }
     }
   }
@@ -114,7 +114,7 @@ Config at `.vscode/mcp.json` in your project. **Key is `servers`, not `mcpServer
       "env": {
         "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
         "WP_API_USERNAME": "your-username",
-        "WP_API_PASSWORD": "abcd efgh ijkl mnop qrst uvwx"
+        "WP_API_PASSWORD": "your application password"
       }
     }
   }
