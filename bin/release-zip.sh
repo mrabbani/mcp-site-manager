@@ -48,6 +48,8 @@ rsync -a \
   --exclude='webpack.config.js' \
   --exclude='phpunit.xml.dist' \
   --exclude='.phpunit.result.cache' \
+  --exclude='README.md' \
+  --exclude='CHANGELOG.md' \
   ./ "$STAGE_DIR/"
 
 echo "==> Creating ${ZIP_FILE}"

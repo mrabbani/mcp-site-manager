@@ -4,9 +4,8 @@
  * Plugin URI:        https://github.com/mrabbani/mcp-site-manager
  * Description:       Manage WordPress from Claude, ChatGPT, Cursor and other MCP clients. Exposes posts, pages, taxonomies, media, plugins, themes, options, menus, diagnostics and maintenance as MCP tools via the MCP Adapter.
  * Version:           0.1.0
- * Requires at least: 6.8
+ * Requires at least: 6.9
  * Requires PHP:      8.0
- * Requires Plugins:  mcp-adapter
  * Author:            mrabbani
  * Author URI:        https://profiles.wordpress.org/mrabbani/
  * License:           GPL-2.0-or-later

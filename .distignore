@@ -25,3 +25,5 @@
 /composer.lock
 /webpack.config.js
 /phpunit.xml.dist
+/README.md
+/CHANGELOG.md
