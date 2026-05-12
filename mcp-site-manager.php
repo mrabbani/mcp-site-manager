@@ -23,8 +23,8 @@ define('MCPSM_FILE', __FILE__);
 define('MCPSM_DIR', plugin_dir_path(__FILE__));
 define('MCPSM_URL', plugin_dir_url(__FILE__));
 
-$autoload = MCPSM_DIR . 'vendor/autoload.php';
-if (!file_exists($autoload)) {
+$mcpsm_autoload = MCPSM_DIR . 'vendor/autoload.php';
+if (!file_exists($mcpsm_autoload)) {
     add_action('admin_notices', function () {
         echo '<div class="notice notice-error"><p>';
         echo esc_html__('MCP Site Manager: composer dependencies missing. Run `composer install` in the plugin directory.', 'mcp-site-manager');
@@ -32,7 +32,7 @@ if (!file_exists($autoload)) {
     });
     return;
 }
-require_once $autoload;
+require_once $mcpsm_autoload;
 
 register_activation_hook(__FILE__, [\Mrabbani\McpSiteManager\Plugin::class, 'on_activate']);
 register_deactivation_hook(__FILE__, [\Mrabbani\McpSiteManager\Plugin::class, 'on_deactivate']);

@@ -3,6 +3,12 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin;
 
+defined('ABSPATH') || exit;
+
+// Aggregates over the plugin's own log table ($wpdb->prefix . internal constant).
+// Caching is intentionally bypassed: the dashboard wants live counts/percentiles.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 final class Stats
 {
     /**

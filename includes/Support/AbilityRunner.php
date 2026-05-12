@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Support;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Admin\AbilityLog;
 
 final class AbilityRunner
@@ -28,7 +30,11 @@ final class AbilityRunner
         } catch (\Throwable $e) {
             $env = ErrorMapper::toMcp($e);
             AbilityLog::record($ability, 'error', (string) $env['code'], self::ms($start));
-            error_log(sprintf('[mcpsm] %s threw %s: %s', $ability, get_class($e), $e->getMessage()));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                // Gated behind WP_DEBUG; surfaces unexpected exceptions to debug.log only.
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+                error_log(sprintf('[mcpsm] %s threw %s: %s', $ability, get_class($e), $e->getMessage()));
+            }
             return new \WP_Error('mcpsm_internal', $env['message'], ['status' => 500]);
         }
     }

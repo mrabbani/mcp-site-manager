@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin;
 
+defined('ABSPATH') || exit;
+
 /**
  * Guided install/activate flow for the MCP Adapter plugin.
  *
@@ -178,6 +180,8 @@ final class AdapterDependency
         }
         check_admin_referer(self::NONCE_ACTIVATE);
 
+        // Sanitized via wp_unslash → rawurldecode → sanitize_text_field; nonce verified above.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $plugin = isset($_GET['plugin']) ? sanitize_text_field(rawurldecode((string) wp_unslash($_GET['plugin']))) : '';
         if ($plugin === '' || strpos($plugin, '..') !== false) {
             wp_die(esc_html__('Invalid plugin path.', 'mcp-site-manager'), '', ['response' => 400]);

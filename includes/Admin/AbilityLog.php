@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin;
 
+defined('ABSPATH') || exit;
+
+// All queries below hit the plugin's own log table ($wpdb->prefix . internal constant).
+// Caching is intentionally bypassed: the table is the source of truth for fresh ability
+// invocation telemetry and admin reads need real-time data.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 final class AbilityLog
 {
     public const TABLE_SUFFIX = 'mcpsm_log';
@@ -81,12 +88,18 @@ final class AbilityLog
         global $wpdb;
         $table = self::table_name();
         $limit = max(1, min(500, $limit));
-        return (array) $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC LIMIT $limit", ARRAY_A);
+        return (array) $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$table} ORDER BY id DESC LIMIT %d", $limit),
+            ARRAY_A
+        );
     }
 
     public static function clear(): void
     {
         global $wpdb;
-        $wpdb->query('TRUNCATE TABLE ' . self::table_name());
+        $table = self::table_name();
+        // Table name is built from $wpdb->prefix and an internal constant; cannot be user input.
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+        $wpdb->query("TRUNCATE TABLE `{$table}`");
     }
 }

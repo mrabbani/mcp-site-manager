@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin\Rest;
 
+defined('ABSPATH') || exit;
+
+// REST handlers below query the plugin's own log table ($wpdb->prefix . internal constant).
+// $orderby_sql is whitelisted; $order is constrained to ASC/DESC; $where is built from
+// %s-placeholder fragments with values in $params. Caching is intentionally bypassed so
+// admin clients see fresh log rows.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 use Mrabbani\McpSiteManager\Admin\AbilityLog;
 use WP_Error;
 use WP_REST_Request;
@@ -105,16 +113,16 @@ final class LogController
             $params[] = $like;
         }
 
-        $count_sql = "SELECT COUNT(*) FROM $log_table l LEFT JOIN $users_table u ON u.ID = l.user_id WHERE $where";
+        $count_sql = "SELECT COUNT(*) FROM {$log_table} l LEFT JOIN {$users_table} u ON u.ID = l.user_id WHERE {$where}";
         $total = empty($params)
             ? (int) $wpdb->get_var($count_sql)
             : (int) $wpdb->get_var($wpdb->prepare($count_sql, ...$params));
 
         $list_sql = "SELECT l.id, l.ts, l.user_id, u.user_login, l.ability, l.status, l.error_code, l.duration_ms
-             FROM $log_table l
-             LEFT JOIN $users_table u ON u.ID = l.user_id
-             WHERE $where
-             ORDER BY $orderby_sql $order, l.id DESC
+             FROM {$log_table} l
+             LEFT JOIN {$users_table} u ON u.ID = l.user_id
+             WHERE {$where}
+             ORDER BY {$orderby_sql} {$order}, l.id DESC
              LIMIT %d OFFSET %d";
 
         $rows = $wpdb->get_results(

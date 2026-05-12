@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Abilities\Diagnostics;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
 use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
 
@@ -76,20 +78,15 @@ final class DiagnosticsBundle extends AbilityBundle
 
     private static function tail(string $path, int $lines): array
     {
-        $f = @fopen($path, 'rb');
-        if (!$f) return [];
-        $buffer = '';
-        $chunk = 4096;
-        fseek($f, 0, SEEK_END);
-        $pos = ftell($f);
-        while ($pos > 0 && substr_count($buffer, "\n") <= $lines) {
-            $read = min($chunk, $pos);
-            $pos -= $read;
-            fseek($f, $pos);
-            $buffer = fread($f, $read) . $buffer;
+        if (!function_exists('WP_Filesystem')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
         }
-        fclose($f);
-        $arr = explode("\n", trim($buffer));
+        WP_Filesystem();
+        global $wp_filesystem;
+        if (!$wp_filesystem || !$wp_filesystem->is_readable($path)) return [];
+        $contents = $wp_filesystem->get_contents($path);
+        if (!is_string($contents) || $contents === '') return [];
+        $arr = explode("\n", trim($contents));
         return array_slice($arr, -$lines);
     }
 }

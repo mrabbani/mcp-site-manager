@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Support;
 
+defined('ABSPATH') || exit;
+
 final class RestInvoker
 {
     /**

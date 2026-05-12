@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Admin;
 
+defined('ABSPATH') || exit;
+
 use Mrabbani\McpSiteManager\Admin\Rest\LogController;
 
 final class LogAssets

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Mrabbani\McpSiteManager\Support;
 
+defined('ABSPATH') || exit;
+
 final class DisabledAbilities
 {
     public const OPTION = 'mcpsm_disabled_abilities';
