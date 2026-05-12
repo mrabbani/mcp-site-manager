@@ -25,11 +25,13 @@ abstract class AbilityBundle
 
     public function register(): void
     {
-        $disabled = \Mrabbani\McpSiteManager\Support\DisabledAbilities::all();
+        // Note: we used to skip wp_register_ability() for disabled abilities,
+        // but that excluded them from the Abilities API entirely. The
+        // wp_register_ability_args filter in Plugin::maybe_hide_from_mcp now
+        // flips meta.mcp.public=false instead, which hides disabled abilities
+        // from the MCP default server while keeping them visible to any other
+        // Abilities API consumer.
         foreach ($this->abilities() as $local => $spec) {
-            if (in_array($local, $disabled, true)) {
-                continue;
-            }
             $name = "mcpsm/$local";
             wp_register_ability($name, [
                 'label'               => $spec['label'],
