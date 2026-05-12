@@ -6,23 +6,49 @@
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-777bb4.svg)](https://www.php.net/releases/8.0/)
 [![WordPress 6.8+](https://img.shields.io/badge/WordPress-6.8%2B-21759b.svg)](https://wordpress.org/download/)
 
-MCP Site Manager exposes ~74 WordPress capabilities — content, taxonomies, media, comments, users, plugins, themes, options, navigation menus, diagnostics, cache and cron — as [Model Context Protocol](https://modelcontextprotocol.io/) tools. Pair it with [WP MCP Adapter](https://github.com/WordPress/mcp-adapter), authenticate with an Application Password, and any MCP-compatible AI agent can drive your WordPress site.
+MCP Site Manager exposes ~74 WordPress capabilities — content, taxonomies, media, comments, users, plugins, themes, options, navigation menus, diagnostics, cache and cron — as [Model Context Protocol](https://modelcontextprotocol.io/) tools. It plugs into the [WP MCP Adapter](https://github.com/WordPress/mcp-adapter) library (already bundled with WooCommerce 10.3+) and any MCP-compatible AI agent — Claude Desktop, Claude Code, Cursor, VS Code, ChatGPT — can drive your WordPress site.
 
 ## Quick start
 
-1. Install and activate MCP Site Manager (this plugin).
-2. If the MCP Adapter dependency is missing, an admin notice appears with an
-   **Install MCP Adapter** button — one click downloads the latest release
-   asset from [WordPress/mcp-adapter Releases](https://github.com/WordPress/mcp-adapter/releases)
-   and activates it. Pin a specific release tag by filtering
-   `mcpsm_adapter_download_url`.
-3. Visit **Settings → MCP Site Manager** for the connection URL.
-4. Generate an Application Password from your user profile.
-5. Add the snippet to your MCP client config (example below).
+1. Install and activate MCP Site Manager.
+2. **If the MCP Adapter library is missing**, an admin notice appears with a one-click *Install MCP Adapter* button that downloads the latest release from [WordPress/mcp-adapter Releases](https://github.com/WordPress/mcp-adapter/releases). Skipped on sites that already ship the library (e.g. WooCommerce).
+3. Visit **Settings → MCP Site Manager** for your live connection URL and ready-to-paste client snippets.
+4. Generate an Application Password from your user profile (HTTP transport) — or skip this step entirely if you'll use the STDIO transport for local dev.
+5. Paste the snippet into your MCP client (examples below).
 
-### Claude Desktop config
+> **Pin a specific MCP Adapter release tag** by filtering `mcpsm_adapter_download_url` to a stable Releases URL.
 
-`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows:
+## Transports
+
+The MCP Adapter ships two transports. Pick by where the AI client and the WordPress install live relative to each other.
+
+### HTTP — for remote / production sites
+
+Best when WordPress is publicly reachable. The AI client speaks JSON-RPC over HTTPS through the [`@automattic/mcp-wordpress-remote`](https://www.npmjs.com/package/@automattic/mcp-wordpress-remote) proxy.
+
+- **Auth**: WordPress Application Password (basic auth). The article also mentions custom OAuth / JWT for advanced setups; this plugin works with whatever the adapter accepts.
+- **Production tip**: create a dedicated WP user with the minimum capabilities required for the abilities you expose. The AI's blast radius equals that user's caps.
+
+### STDIO — for local development
+
+Best when WordPress runs on the same machine as the AI client. The client spawns `wp mcp-adapter serve` directly via WP-CLI — **no Application Password, no HTTPS, nothing to expose**.
+
+```bash
+wp mcp-adapter serve --server=mcp-adapter-default-server --user=admin
+```
+
+The client invokes this command on its own; you don't run it manually.
+
+## Connecting your AI client
+
+Replace `https://your-site.com` and `your-username` / `your-password` (Application Password) with your own values. For STDIO, replace `/path/to/wordpress` with your wp-cli `--path`.
+
+### Claude Desktop
+
+Config at `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows). Open via **Settings → Developer → Edit config**.
+
+<details>
+<summary><strong>HTTP</strong> (remote site)</summary>
 
 ```json
 {
@@ -39,8 +65,87 @@ MCP Site Manager exposes ~74 WordPress capabilities — content, taxonomies, med
   }
 }
 ```
+</details>
+
+<details>
+<summary><strong>STDIO</strong> (local dev)</summary>
+
+```json
+{
+  "mcpServers": {
+    "mcp-site-manager": {
+      "command": "wp",
+      "args": [
+        "--path=/path/to/wordpress",
+        "mcp-adapter",
+        "serve",
+        "--server=mcp-adapter-default-server",
+        "--user=admin"
+      ]
+    }
+  }
+}
+```
+</details>
 
 Quit and relaunch Claude Desktop. Try: *"List my latest 5 posts"*.
+
+### Claude Code
+
+Config at `~/.claude.json` (global) or `.mcp.json` (project). Same shape as Claude Desktop — use `mcpServers`. The HTTP and STDIO snippets above work verbatim.
+
+### Cursor
+
+Config at `~/.cursor/mcp.json` or via **Settings → Tools and MCP → Add Custom MCP**. Same `mcpServers` shape as Claude Desktop.
+
+### VS Code
+
+Config at `.vscode/mcp.json` in your project. **Key is `servers`, not `mcpServers`** — this is the only client that differs.
+
+<details>
+<summary><strong>HTTP</strong></summary>
+
+```json
+{
+  "servers": {
+    "mcp-site-manager": {
+      "command": "npx",
+      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
+      "env": {
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "your-username",
+        "WP_API_PASSWORD": "abcd efgh ijkl mnop qrst uvwx"
+      }
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>STDIO</strong></summary>
+
+```json
+{
+  "servers": {
+    "mcp-site-manager": {
+      "command": "wp",
+      "args": [
+        "--path=/path/to/wordpress",
+        "mcp-adapter",
+        "serve",
+        "--server=mcp-adapter-default-server",
+        "--user=admin"
+      ]
+    }
+  }
+}
+```
+</details>
+
+### ChatGPT and other clients
+
+Any client that speaks MCP over HTTP or STDIO works. Use the HTTP block above; check your client's docs for the equivalent of `mcpServers`/`servers`.
 
 ## Architecture
 
@@ -249,7 +354,7 @@ public function abilities(): array
 }
 ```
 
-That's it. The bundle base wraps your `execute` in `AbilityRunner` (logging + error handling), registers it with `wp_register_ability()`, and the default-server filter exposes it to MCP clients automatically as `mcpsm-posts-trash-empty`.
+That's it. The bundle base wraps your `execute` in `AbilityRunner` (logging + error handling), registers it via `wp_register_ability()` with `meta.mcp.public = true`, and MCP Adapter's default server picks it up automatically as `mcpsm-posts-trash-empty` — no filter wiring required.
 
 ## Contributing
 
