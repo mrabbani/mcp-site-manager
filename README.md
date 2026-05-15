@@ -227,6 +227,25 @@ comment_registration, show_on_front, page_on_front, page_for_posts
 
 Anything outside the list is rejected with a `403` and an `allowed_keys` payload telling the client what's available.
 
+### Outbound URL guard (SSRF + scheme + host allowlist)
+
+Three abilities accept a caller-supplied URL the server then dereferences:
+
+| Ability | Field | Default scheme | Default host allowlist | Filter |
+|---|---|---|---|---|
+| `media-upload` | `source_url` | http or https | _(no host restriction)_ | `mcpsm_media_upload_allowed_hosts` |
+| `plugins-install` | `zip_url` | **https only** | `downloads.wordpress.org`, `github.com` | `mcpsm_plugin_install_allowed_hosts` |
+| `themes-install` | `zip_url` | **https only** | `downloads.wordpress.org`, `github.com` | `mcpsm_theme_install_allowed_hosts` |
+
+Every URL is checked by `Support\UrlGuard` before the fetch:
+
+1. Scheme must be in the allowlist (https-only for code; http or https for media).
+2. Host must be in the configured allowlist (when one is set).
+3. DNS resolution must succeed.
+4. **Every** resolved IP must be globally routable — RFC 1918 (`10/8`, `172.16/12`, `192.168/16`), loopback (`127/8`, `::1`), and link-local (`169.254/16` — the AWS/GCP metadata endpoint) are rejected.
+
+This means an authenticated MCP client cannot pivot through the WordPress server into the host's private network or coerce the server into installing a plugin from an arbitrary URL even if its Application Password is leaked, unless the operator has explicitly broadened the host allowlist via filter.
+
 ## Ability inventory (~74)
 
 | Domain | Abilities |

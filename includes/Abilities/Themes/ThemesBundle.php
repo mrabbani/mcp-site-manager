@@ -7,6 +7,7 @@ defined('ABSPATH') || exit;
 
 use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
 use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
+use Mrabbani\McpSiteManager\Support\UrlGuard;
 
 final class ThemesBundle extends AbilityBundle
 {
@@ -151,6 +152,9 @@ final class ThemesBundle extends AbilityBundle
             $api = themes_api('theme_information', ['slug' => $a['slug'], 'fields' => ['sections' => false]]);
             if (is_wp_error($api)) return $api;
             $source = $api->download_link;
+        } else {
+            $guard = self::guard_install_url((string) $source);
+            if (is_wp_error($guard)) return $guard;
         }
         $upgrader = new \Theme_Upgrader(new \WP_Ajax_Upgrader_Skin());
         $r = $upgrader->install($source);
@@ -164,5 +168,29 @@ final class ThemesBundle extends AbilityBundle
             $out['active'] = true;
         }
         return $out;
+    }
+
+    /**
+     * SSRF + host allowlist for caller-supplied zip_url. Mirrors PluginsBundle:
+     * https-only, default trusted hosts, filterable via
+     * `mcpsm_theme_install_allowed_hosts`. Plain-http downloads of executable
+     * code are never accepted.
+     */
+    private static function guard_install_url(string $url)
+    {
+        /**
+         * Filter the host allowlist for caller-supplied theme install zip_url.
+         *
+         * @param string[] $hosts Default trusted hosts.
+         */
+        $hosts = apply_filters('mcpsm_theme_install_allowed_hosts', [
+            'downloads.wordpress.org',
+            'github.com',
+        ]);
+        return UrlGuard::validate($url, [
+            'https_only'    => true,
+            'allowed_hosts' => is_array($hosts) ? $hosts : [],
+            'error_code'    => 'mcpsm_theme_install_blocked',
+        ]);
     }
 }

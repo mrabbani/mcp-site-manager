@@ -37,7 +37,8 @@ Need to wire up a specific AI client? Jump straight to the upstream walkthrough:
 
 * Every ability runs with the **calling user's WordPress capabilities**. A Subscriber can only do what a Subscriber can do.
 * Authentication uses **Application Passwords**. Revoke at any time from your user profile.
-* `media-upload` URLs are validated to block server-side request forgery (private, loopback, and link-local addresses are rejected before download).
+* Every URL the server is asked to dereference (`media-upload` `source_url`, `plugins-install` and `themes-install` `zip_url`) is filtered by a shared SSRF guard: scheme allowlist, optional host allowlist, and rejection of private, loopback, and link-local addresses.
+* `plugins-install` and `themes-install` `zip_url` are **https-only by default** and restricted to `downloads.wordpress.org` and `github.com`. The host lists are filterable via `mcpsm_plugin_install_allowed_hosts` and `mcpsm_theme_install_allowed_hosts`.
 * Site options exposed via MCP are restricted to a curated allowlist; both the allowlist and a denylist of protected prefixes are filterable.
 * Every ability call is logged to a local table (toggleable) with user, ability, status, error code, and duration.
 * Plugin uninstall removes the log table and plugin-owned options.

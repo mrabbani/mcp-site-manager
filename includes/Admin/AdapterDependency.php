@@ -5,6 +5,8 @@ namespace Mrabbani\McpSiteManager\Admin;
 
 defined('ABSPATH') || exit;
 
+use Mrabbani\McpSiteManager\Support\UrlGuard;
+
 /**
  * Guided install/activate flow for the MCP Adapter plugin.
  *
@@ -132,6 +134,26 @@ final class AdapterDependency
         require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
         $url = (string) apply_filters('mcpsm_adapter_download_url', self::DEFAULT_DOWNLOAD_URL);
+
+        // Lock the dependency-install path to the two trusted source-of-truth hosts
+        // for the upstream adapter (WordPress.org's directory CDN and the official
+        // WordPress GitHub org's release assets). A site owner can broaden this via
+        // `mcpsm_adapter_download_allowed_hosts` if they need to mirror the zip
+        // internally, but the default protects them from a misconfigured filter
+        // pointing the installer at an arbitrary host.
+        $hosts = apply_filters('mcpsm_adapter_download_allowed_hosts', [
+            'github.com',
+            'downloads.wordpress.org',
+        ]);
+        $guard = UrlGuard::validate($url, [
+            'https_only'    => true,
+            'allowed_hosts' => is_array($hosts) ? $hosts : [],
+            'error_code'    => 'mcpsm_adapter_download_blocked',
+        ]);
+        if (is_wp_error($guard)) {
+            self::flash('error', $guard->get_error_message());
+            self::redirect_back();
+        }
 
         add_filter('upgrader_source_selection', [self::class, 'rename_source_folder'], 10, 3);
 
