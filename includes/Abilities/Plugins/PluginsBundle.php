@@ -7,6 +7,7 @@ defined('ABSPATH') || exit;
 
 use Mrabbani\McpSiteManager\Abilities\AbilityBundle;
 use Mrabbani\McpSiteManager\Support\SchemaBuilder as S;
+use Mrabbani\McpSiteManager\Support\UrlGuard;
 
 final class PluginsBundle extends AbilityBundle
 {
@@ -124,6 +125,9 @@ final class PluginsBundle extends AbilityBundle
             $api = plugins_api('plugin_information', ['slug' => $a['slug'], 'fields' => ['sections' => false]]);
             if (is_wp_error($api)) return $api;
             $source = $api->download_link;
+        } else {
+            $guard = self::guard_install_url((string) $source);
+            if (is_wp_error($guard)) return $guard;
         }
         $upgrader = new \Plugin_Upgrader(new \WP_Ajax_Upgrader_Skin());
         $r = $upgrader->install($source);
@@ -147,6 +151,36 @@ final class PluginsBundle extends AbilityBundle
         $r = $upgrader->upgrade($plugin);
         if (is_wp_error($r)) return $r;
         return ['plugin' => $plugin, 'updated' => (bool) $r];
+    }
+
+    /**
+     * SSRF + host allowlist for caller-supplied zip_url. Defaults to the two
+     * hosts that ship plugin zips today (downloads.wordpress.org for the
+     * official directory, github.com for release assets). Operators that need
+     * to install from elsewhere can extend the allowlist via the
+     * `mcpsm_plugin_install_allowed_hosts` filter; passing an empty array
+     * disables the host check entirely (SSRF IP filtering still applies).
+     *
+     * https-only is enforced — there is no scenario where downloading
+     * executable code over plain http is the right behavior, even for
+     * private mirrors.
+     */
+    private static function guard_install_url(string $url)
+    {
+        /**
+         * Filter the host allowlist for caller-supplied plugin install zip_url.
+         *
+         * @param string[] $hosts Default trusted hosts.
+         */
+        $hosts = apply_filters('mcpsm_plugin_install_allowed_hosts', [
+            'downloads.wordpress.org',
+            'github.com',
+        ]);
+        return UrlGuard::validate($url, [
+            'https_only'    => true,
+            'allowed_hosts' => is_array($hosts) ? $hosts : [],
+            'error_code'    => 'mcpsm_plugin_install_blocked',
+        ]);
     }
 
     private function search(array $a)
